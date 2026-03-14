@@ -85,6 +85,14 @@
 - Updated `app/(auth)/sign-up-success/page.tsx` from legacy centered card layout to the split auth visual system with branded left panel and consistent right-side success content/actions.
 - Updated `app/(auth)/update-password/page.tsx` to the split auth layout and refactored `components/update-password-form.tsx` to match current auth form style (no legacy card wrapper, branded CTA/link treatment).
 - Updated `app/auth/error/page.tsx` from legacy centered card to the same split auth visual pattern with clearer retry/login action path.
+- Added provider-wide patient operations dashboard: `app/(dashboard)/provider/patients/page.tsx` with three consolidated panels for patient list, appointment stream, and patient clinical history summaries.
+- Updated provider navigation in `app/(dashboard)/layout.tsx` to include a direct link to `/provider/patients`.
+- Updated `app/(dashboard)/dashboard/page.tsx` provider quick-links to include the new Patients Dashboard entry point.
+- Updated registration onboarding flow in `app/api/auth/handlers.ts`:
+- Email confirmation callback now uses `/auth/confirm?next=/onboarding` (instead of dashboard).
+- Immediate-session signup now returns `nextPath: "/onboarding"` so onboarding is the first post-register destination.
+- Updated sign-up success copy in `app/(auth)/sign-up-success/page.tsx` to explicitly direct users to login and continue onboarding.
+- Added regression test coverage in `app/api/auth/route.test.ts` for session-backed signup redirecting to onboarding.
 - Started multi-tenant white-label foundation (phase 1):
 - Added migration `supabase/migrations/20260314161000_multi_tenant_foundation.sql` creating `public.organizations` and `public.organization_memberships`, plus helper functions `public.is_member_of_org(uuid)` and `public.default_organization_id()`.
 - Added tenant keys (`organization_id`) to `patients`, `provider_availability_slots`, `appointments`, `encounters`, `clinical_notes`, and `audit_logs`, with backfill/indexes/foreign keys.
@@ -112,3 +120,25 @@
 - Fixed onboarding API regression causing `Unable to verify organization membership`:
 - Removed the pre-onboarding membership lookup guard in `app/api/organizations/onboarding/handlers.ts` that could fail in some environments.
 - Kept onboarding correctness through middleware gating (`/onboarding` only for users without memberships) plus slug uniqueness check and owner-membership creation.
+- Updated `supabase/seed.mjs` to support tenant-aware seeding and richer appointment history:
+- Adds one seed organization (`seed-org`) + memberships when `organizations`/`organization_memberships` exist.
+- Adds robust fallback for projects where tenant tables are not yet migrated (`organization: not_available`).
+- Includes `organization_id` in inserts when tenant columns exist on domain tables.
+- Guarantees patient history coverage by assigning past appointments across patients and reports `patientsWithHistory` in seed summary output.
+- Updates slot availability for confirmed appointments after insert to reflect booking state.
+- Completed remote setup execution:
+- Linked remote Supabase project via CLI (`supabase link --project-ref lvevtvwcfsezmbehvlnh`).
+- Applied all pending migrations with `supabase db push`, including `20260314161000_multi_tenant_foundation.sql` and `20260314164000_org_onboarding_policies.sql`.
+- Re-ran `pnpm seed` successfully after migration; seed summary now includes a concrete organization ID and `patientsWithHistory: 18`.
+- Added admin Supabase client utility at `lib/supabase/admin.ts` and new admin organizations dashboard route `app/(dashboard)/organizations/page.tsx` for cross-organization visibility.
+- Updated dashboard shell/navigation and home cards (`app/(dashboard)/layout.tsx`, `app/(dashboard)/dashboard/page.tsx`) to be role-aware: patient-only links for patient role, provider/owner/admin operational links, and admin organizations entry point.
+- Updated `lib/supabase/middleware.ts` to bypass onboarding-membership gating for platform `admin` users.
+- Updated `app/(dashboard)/provider/patients/page.tsx` to allow provider + organization owner/admin access and to render organization-scoped patient/appointment/history data for owner/admin memberships.
+- Restricted patient pages (`app/(dashboard)/patient/appointments/page.tsx`, `app/(dashboard)/patient/records/page.tsx`) to patient-role accounts only.
+- Added migration `supabase/migrations/20260314170000_owner_admin_org_read_access.sql` introducing org owner/admin SELECT policies for `patients`, `appointments`, `encounters`, and `clinical_notes`.
+- Created/updated Supabase user `rutvik.patel@bacancy.com` with `user_metadata.role = admin` and confirmed account update via admin API.
+- Hardened signup email-confirmation redirect generation in `app/api/auth/handlers.ts` by resolving base URL from `NEXT_PUBLIC_SITE_URL`/`SITE_URL` with request-origin fallback.
+- Expanded Supabase signup error mapping in `lib/api/errors.ts` for actionable client errors: `AUTH_REDIRECT_URL_NOT_ALLOWED`, `AUTH_SIGN_UP_DISABLED`, and `AUTH_SIGN_UP_DB_ERROR`.
+- Added regression tests in `lib/api/errors.test.ts` for the new signup error mappings.
+- Updated `.env.example` and `README.md` to document `NEXT_PUBLIC_SITE_URL` for auth email redirect reliability.
+- Updated auth route copy/alignment: changed "Back to landing page" CTA text to "Back" across auth split pages (`/login`, `/register`, `/forgot-password`, `/sign-up-success`, `/update-password`, `/auth/error`), center-aligned right-panel status content on `/sign-up-success` and `/auth/error`, and verified auth login links resolve to `/login`.

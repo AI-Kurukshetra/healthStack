@@ -37,8 +37,15 @@ Legend: `[ ]` todo, `[x]` done, `[~]` in-progress, `[!]` blocked
 - [x] [2026-03-14 13:59] Refactor auth pages/forms UX: remove right-panel form cards for login/register/forgot and center-align left-panel content across auth routes
 - [x] [2026-03-14 14:05] Complete multi-tenant onboarding flow: add organization-creation API, onboarding UI, and middleware gate redirecting membership-missing users to `/onboarding`
 - [x] [2026-03-14 14:09] Fix onboarding API membership-verification failure by removing brittle pre-check and relying on middleware gate + org slug/membership create flow
+- [x] [2026-03-14 14:20] Update seed script to support one-organization seeding when tenant tables exist and guarantee patient appointment history coverage
+- [x] [2026-03-14 14:28] Apply pending migrations to remote Supabase project (`supabase link` + `supabase db push` completed)
 - [x] [2026-03-14 13:56] Add public pricing page and expand landing page sections for MVP core features (onboarding, scheduling, consultation, records, compliance)
 - [x] [2026-03-14 14:00] Lighten auth right-side section and improve auth input clarity (higher contrast borders/backgrounds and stronger focus states)
 - [x] [2026-03-14 14:02] Remove right-side auth panel card wrappers from login/register/forgot-password while keeping lighter panel background
 - [x] [2026-03-14 14:04] Implement custom auth input component and apply it across login/register/forgot-password/update-password forms
 - [x] [2026-03-14 14:14] Make `/sign-up-success`, `/update-password`, and `/auth/error` UI consistent with split auth layout and current auth form styling
+- [x] [2026-03-14 14:28] Create provider patients dashboard at `/provider/patients` to view patients, appointments, and patient history with navigation links
+- [x] [2026-03-14 14:42] Streamline register onboarding flow so sign-up directs to onboarding (direct or post-email-confirm) as the single next step
+- [x] [2026-03-14 14:41] Create/update super admin user (`rutvik.patel@bacancy.com`) and implement role-based dashboard visibility: admin all organizations, owner/admin org-scoped patient data, patient self-only appointments/history
+- [x] [2026-03-14 14:52] Update auth UX copy/alignment: replace "Back to landing page" with "Back", verify login links target `/login`, and center-align auth status page content
+- [x] [2026-03-14 14:53] Fix Supabase signup reliability and diagnostics: configurable auth email redirect base URL + explicit signup error mapping for redirect/signups-disabled/database failures

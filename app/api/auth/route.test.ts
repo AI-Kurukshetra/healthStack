@@ -168,6 +168,48 @@ describe("app/api/auth/route", () => {
     });
   });
 
+  it("routes directly to onboarding when sign-up returns an active session", async () => {
+    const response = await handleAuthPost(
+      createFakeAuthClient({
+        signUp: async ({ email }) => ({
+          data: {
+            user: createFakeUser({
+              email,
+              email_confirmed_at: "2026-03-14T11:00:00.000Z",
+              last_sign_in_at: "2026-03-14T11:00:00.000Z",
+            }),
+            session: { access_token: "token" },
+          },
+          error: null,
+        }),
+      }),
+      "req-sign-up-session",
+      new URL("http://localhost:3000/api/auth"),
+      {
+        action: "sign-up",
+        email: "instant-user@example.com",
+        password: "password123",
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      data: {
+        user: {
+          email: "instant-user@example.com",
+        },
+        session: {
+          isAuthenticated: true,
+          needsEmailConfirmation: false,
+        },
+        nextPath: "/onboarding",
+      },
+      message: "Signed up.",
+      requestId: "req-sign-up-session",
+    });
+  });
+
   it("signs out the local session", async () => {
     let scope: "local" | null = null;
 

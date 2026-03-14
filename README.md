@@ -13,6 +13,7 @@ Copy `.env.example` into `.env.local` and set values:
 
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_SITE_URL` (recommended for auth email redirects, e.g. `http://localhost:3000`)
 - `SUPABASE_SERVICE_ROLE_KEY`
 
 ## Run

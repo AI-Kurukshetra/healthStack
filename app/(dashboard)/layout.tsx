@@ -1,5 +1,5 @@
 import { LogoutButton } from "@/components/logout-button";
-import { getUserRole } from "@/lib/auth/roles";
+import { getUserRole, isPlatformAdmin } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import Link from "next/link";
@@ -29,6 +29,7 @@ export default async function DashboardLayout({
     redirect("/login");
   }
   const role = getUserRole(data.user);
+  const isAdmin = isPlatformAdmin(data.user);
 
   return (
     <main
@@ -45,24 +46,44 @@ export default async function DashboardLayout({
             >
               Health Stack
             </Link>
-            <Link
-              href="/patient/appointments"
-              className="rounded-full px-3 py-1 text-xs text-slate-700 transition hover:bg-cyan-900/10 hover:text-cyan-950"
-            >
-              Appointments
-            </Link>
-            <Link
-              href="/patient/records"
-              className="rounded-full px-3 py-1 text-xs text-slate-700 transition hover:bg-cyan-900/10 hover:text-cyan-950"
-            >
-              Records
-            </Link>
-            {role === "provider" ? (
+            {role === "patient" ? (
+              <>
+                <Link
+                  href="/patient/appointments"
+                  className="rounded-full px-3 py-1 text-xs text-slate-700 transition hover:bg-cyan-900/10 hover:text-cyan-950"
+                >
+                  Appointments
+                </Link>
+                <Link
+                  href="/patient/records"
+                  className="rounded-full px-3 py-1 text-xs text-slate-700 transition hover:bg-cyan-900/10 hover:text-cyan-950"
+                >
+                  Records
+                </Link>
+              </>
+            ) : null}
+            {role === "provider" || isAdmin ? (
               <Link
                 href="/provider"
                 className="rounded-full px-3 py-1 text-xs text-slate-700 transition hover:bg-cyan-900/10 hover:text-cyan-950"
               >
                 Provider queue
+              </Link>
+            ) : null}
+            {role === "provider" || isAdmin ? (
+              <Link
+                href="/provider/patients"
+                className="rounded-full px-3 py-1 text-xs text-slate-700 transition hover:bg-cyan-900/10 hover:text-cyan-950"
+              >
+                Patients dashboard
+              </Link>
+            ) : null}
+            {isAdmin ? (
+              <Link
+                href="/organizations"
+                className="rounded-full px-3 py-1 text-xs text-slate-700 transition hover:bg-cyan-900/10 hover:text-cyan-950"
+              >
+                Organizations
               </Link>
             ) : null}
           </div>

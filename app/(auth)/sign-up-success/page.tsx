@@ -25,25 +25,25 @@ export default function SignUpSuccessPage() {
           href="/"
           className="inline-flex w-fit self-center rounded-full border border-slate-600 px-4 py-2 text-sm transition hover:border-cyan-300 hover:text-cyan-200"
         >
-          Back to landing page
+          Back
         </Link>
       </section>
       <section className="relative flex items-center justify-center bg-white/45 p-6 md:p-10">
-        <div className="w-full max-w-sm space-y-3">
+        <div className="w-full max-w-sm space-y-3 text-center">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
             Sign Up Complete
           </p>
           <h2 className="text-2xl font-semibold text-cyan-950">Check your email</h2>
           <p className="text-sm text-slate-600">
             Your account is created. Open the confirmation email and follow the
-            link to activate your account.
+            link to activate your account and continue onboarding.
           </p>
-          <div className="pt-2 text-sm">
+          <div className="pt-2 text-sm text-center">
             <Link
               href="/login"
               className="font-medium text-cyan-900 underline underline-offset-4"
             >
-              Continue to login
+              Login to continue onboarding
             </Link>
           </div>
         </div>

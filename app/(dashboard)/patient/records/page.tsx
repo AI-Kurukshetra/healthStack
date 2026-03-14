@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getUserRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { medicalRecordSummarySchema } from "@/lib/validations/medical-record.schema";
 import type { Metadata } from "next";
@@ -10,15 +11,16 @@ export const metadata: Metadata = {
 export default async function PatientRecordsPage() {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
+  const role = getUserRole(authData.user);
 
-  if (!authData.user) {
+  if (!authData.user || role !== "patient") {
     return (
       <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
         <CardHeader>
           <CardTitle className="text-cyan-950">Access denied</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-slate-700">
-          Sign in to view your records.
+          Patient role required to view records.
         </CardContent>
       </Card>
     );

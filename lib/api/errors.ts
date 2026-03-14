@@ -93,6 +93,35 @@ export function mapAuthError(
       });
     }
 
+    if (
+      normalizedMessage.includes("redirect url is not allowed") ||
+      normalizedMessage.includes("invalid redirect url")
+    ) {
+      return new ApiError({
+        code: "AUTH_REDIRECT_URL_NOT_ALLOWED",
+        message:
+          "Sign-up email redirect URL is not allowed. Add your app URL to Supabase Auth URL configuration.",
+        status: 400,
+      });
+    }
+
+    if (normalizedMessage.includes("signups not allowed for this instance")) {
+      return new ApiError({
+        code: "AUTH_SIGN_UP_DISABLED",
+        message: "Email sign-ups are disabled in Supabase Auth settings.",
+        status: 403,
+      });
+    }
+
+    if (normalizedMessage.includes("database error saving new user")) {
+      return new ApiError({
+        code: "AUTH_SIGN_UP_DB_ERROR",
+        message:
+          "Supabase could not create the user. Check Supabase Auth logs for database trigger/policy errors.",
+        status: 500,
+      });
+    }
+
     return new ApiError({
       code: "AUTH_SIGN_UP_FAILED",
       message: "Unable to create your account.",

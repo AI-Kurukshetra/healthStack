@@ -75,7 +75,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (data.user && !isPathPublic && !isApiRoute) {
+  const isPlatformAdmin = data.user?.user_metadata?.role === "admin";
+
+  if (data.user && !isPathPublic && !isApiRoute && !isPlatformAdmin) {
     const { data: memberships, error: membershipError } = await supabase
       .from("organization_memberships")
       .select("id")

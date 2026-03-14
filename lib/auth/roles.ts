@@ -25,3 +25,7 @@ export function getUserRole(user: AuthUser | null): UserRole {
 export function isProvider(user: AuthUser | null): boolean {
   return getUserRole(user) === "provider";
 }
+
+export function isPlatformAdmin(user: AuthUser | null): boolean {
+  return getUserRole(user) === "admin";
+}

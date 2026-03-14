@@ -102,3 +102,16 @@
 - RLS impact:
   - Enables onboarding API flows to create organization + owner membership without service-role usage.
 - Notes: supports phase-2 multi-tenant onboarding completion for newly signed-up users who do not yet have membership rows.
+
+### `20260314170000_owner_admin_org_read_access.sql`
+- Type: policy migration
+- DDL/DML:
+  - Adds owner/admin organization-level SELECT policies:
+    - `patients_select_org_admin` on `public.patients`
+    - `appointments_select_org_admin` on `public.appointments`
+    - `encounters_select_org_admin` on `public.encounters`
+    - `clinical_notes_select_org_admin` on `public.clinical_notes`
+- RLS impact:
+  - Organization members with membership role `owner` or `admin` can read tenant-scoped patient and clinical operational data within their own organization.
+  - Existing patient/provider ownership policies remain in place; this migration adds privileged org-lead read visibility without broadening write permissions.
+- Notes: enables owner/admin dashboard views to inspect organization-related patient data while preserving tenant boundaries.

@@ -164,13 +164,14 @@ async function handleSignUp(
   requestUrl: URL,
   input: Extract<AuthMutationInput, { action: "sign-up" }>,
 ) {
+  const emailRedirectBaseUrl = resolveEmailRedirectBaseUrl(requestUrl);
   const { data, error } = await client.auth.signUp({
     email: input.email,
     password: input.password,
     options: {
       emailRedirectTo: new URL(
-        "/auth/confirm?next=/dashboard",
-        requestUrl.origin,
+        "/auth/confirm?next=/onboarding",
+        emailRedirectBaseUrl,
       ).toString(),
     },
   });
@@ -183,7 +184,7 @@ async function handleSignUp(
   const responseData = buildSessionData(data.user, {
     isAuthenticated: data.session !== null,
     needsEmailConfirmation,
-    nextPath: needsEmailConfirmation ? "/sign-up-success" : "/dashboard",
+    nextPath: needsEmailConfirmation ? "/sign-up-success" : "/onboarding",
   });
 
   const message = needsEmailConfirmation
@@ -203,6 +204,28 @@ async function handleSignUp(
   });
 
   return createMutationResponse(responseData, requestId, message);
+}
+
+function resolveEmailRedirectBaseUrl(requestUrl: URL): URL {
+  const candidateValues = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.SITE_URL,
+    requestUrl.origin,
+  ];
+
+  for (const candidate of candidateValues) {
+    if (!candidate) {
+      continue;
+    }
+
+    try {
+      return new URL(candidate);
+    } catch {
+      continue;
+    }
+  }
+
+  return new URL(requestUrl.origin);
 }
 
 async function handleSignOut(client: AuthRouteClient, requestId: string) {

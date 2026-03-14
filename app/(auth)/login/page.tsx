@@ -27,7 +27,7 @@ export default function LoginPage() {
           href="/"
           className="inline-flex w-fit self-center rounded-full border border-slate-600 px-4 py-2 text-sm transition hover:border-cyan-300 hover:text-cyan-200"
         >
-          Back to landing page
+          Back
         </Link>
       </section>
       <section className="relative flex items-center justify-center bg-white/45 p-6 md:p-10">

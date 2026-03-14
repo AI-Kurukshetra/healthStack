@@ -132,6 +132,14 @@
 - Decision: Apply the same split auth layout and right-panel content styling to `/sign-up-success`, `/update-password`, and `/auth/error`.
 - Rationale: These routes are part of the same authentication journey and should not revert to the older centered-card pattern.
 
+## 2026-03-14 - Provider Consolidated Patients Dashboard
+- Decision: Add `/provider/patients` as a provider-only consolidated view for patient roster, appointment history, and clinical-note history.
+- Rationale: Providers requested a single operational dashboard to review patient context and activity without switching between multiple pages.
+
+## 2026-03-14 - Single Register-Onboarding Progression
+- Decision: Make onboarding the first destination after registration for both signup outcomes (instant session and email-confirm path).
+- Rationale: This removes dashboard detours and enforces one clear register -> onboarding progression before normal app usage.
+
 ## 2026-03-14 - Multi-Tenant Rollout Strategy (Phase 1)
 - Decision: Introduce tenant architecture in two phases, starting with schema and RLS foundations (`organizations`, memberships, `organization_id` keys, tenant membership predicates) before enforcing tenant context in every API mutation/query.
 - Rationale: This minimizes feature regression risk while establishing the non-negotiable data-isolation baseline required for white-label expansion.
@@ -151,3 +159,27 @@
 ## 2026-03-14 - Onboarding Membership Check Placement
 - Decision: Remove API-level pre-check for existing memberships in onboarding handler and rely on middleware route gating to determine onboarding eligibility.
 - Rationale: The pre-check introduced avoidable failure points; middleware already enforces onboarding entry conditions, while API keeps only critical validations (auth, slug uniqueness, create operations).
+
+## 2026-03-14 - Seeder Backward Compatibility During Tenant Rollout
+- Decision: Make `supabase/seed.mjs` detect tenant-table availability and seed one organization + memberships only when migrated tables exist; otherwise continue non-tenant seeding.
+- Rationale: This keeps seeding operational across environments that are at different migration states while still validating tenant-aware data paths where available.
+
+## 2026-03-14 - Platform Admin Dashboard Visibility
+- Decision: Treat `user_metadata.role = admin` as a platform-level super user that can bypass onboarding membership gate and access a dedicated `/organizations` dashboard backed by server-side service-role reads.
+- Rationale: Admin oversight requires cross-tenant visibility that tenant-scoped RLS intentionally restricts for regular members.
+
+## 2026-03-14 - Owner/Admin Organization Read Scope
+- Decision: Extend RLS read access so organization `owner`/`admin` memberships can read organization-scoped `patients`, `appointments`, `encounters`, and `clinical_notes`, and update provider patients dashboard to use organization-scope for those roles.
+- Rationale: Organization leadership needs full patient operational visibility within their tenant without granting platform-wide privileges.
+
+## 2026-03-14 - Supabase Signup Redirect Base URL Resolution
+- Decision: Resolve sign-up confirmation `emailRedirectTo` base URL from `NEXT_PUBLIC_SITE_URL` (or `SITE_URL`) before falling back to request origin.
+- Rationale: In some environments, request-origin can be untrusted or not in Supabase allow-list, causing sign-up failures with redirect-url errors.
+
+## 2026-03-14 - Actionable Signup Error Mapping
+- Decision: Add explicit auth error mappings for redirect URL allow-list failures, disabled signups, and auth DB user-creation failures.
+- Rationale: Generic signup failure messages slowed diagnosis; explicit error codes/messages make Supabase configuration issues immediately actionable.
+
+## 2026-03-14 - Auth Navigation Copy and Status Alignment
+- Decision: Standardize split-auth secondary navigation copy to a concise `Back` CTA and center-align status-state right-panel content on `/sign-up-success` and `/auth/error`, while keeping canonical login links on `/login`.
+- Rationale: The shorter CTA and centered status messaging improve scanability/consistency across auth routes without changing route behavior.

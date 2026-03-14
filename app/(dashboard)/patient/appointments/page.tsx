@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getUserRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import {
   appointmentRecordSchema,
@@ -15,6 +16,21 @@ export const metadata: Metadata = {
 export default async function PatientAppointmentsPage() {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
+  const role = getUserRole(authData.user);
+
+  if (!authData.user || role !== "patient") {
+    return (
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-cyan-950">Access denied</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-slate-700">
+          Patient role required to view appointments and history.
+        </CardContent>
+      </Card>
+    );
+  }
+
   const nowIso = new Date().toISOString();
   const { data } = await supabase
     .from("provider_availability_slots")

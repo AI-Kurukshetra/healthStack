@@ -1,6 +1,6 @@
 import { PatientProfileForm } from "@/components/patients/patient-profile-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getUserRole } from "@/lib/auth/roles";
+import { getUserRole, isPlatformAdmin } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { patientRecordSchema } from "@/lib/validations/patient.schema";
 import type { Metadata } from "next";
@@ -14,9 +14,10 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
   const role = getUserRole(authData.user);
+  const isAdmin = isPlatformAdmin(authData.user);
   let initialProfile = null;
 
-  if (authData.user) {
+  if (authData.user && role === "patient") {
     const { data } = await supabase
       .from("patients")
       .select("id,user_id,first_name,last_name,date_of_birth,created_at,updated_at")
@@ -46,34 +47,64 @@ export default async function DashboardPage() {
           <CardTitle className="text-2xl text-cyan-950">Care Workflow Hub</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-2 text-sm text-muted-foreground md:grid-cols-3">
-          <Link
-            className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
-            href="/patient/appointments"
-          >
-            <p className="font-medium text-slate-950">Appointments</p>
-            <p className="text-slate-600">Book, track, and join consultations.</p>
-          </Link>
-          <Link
-            className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
-            href="/patient/records"
-          >
-            <p className="font-medium text-slate-950">Patient Records</p>
-            <p className="text-slate-600">View clinical note summaries and history.</p>
-          </Link>
-          {role === "provider" ? (
+          {role === "patient" ? (
+            <div className="grid gap-2">
+              <Link
+                className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
+                href="/patient/appointments"
+              >
+                <p className="font-medium text-slate-950">Appointments</p>
+                <p className="text-slate-600">Book, track, and join consultations.</p>
+              </Link>
+              <Link
+                className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
+                href="/patient/records"
+              >
+                <p className="font-medium text-slate-950">Patient Records</p>
+                <p className="text-slate-600">
+                  View clinical note summaries and history.
+                </p>
+              </Link>
+            </div>
+          ) : null}
+          {role === "provider" || isAdmin ? (
+            <div className="grid gap-2">
+              <Link
+                className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
+                href="/provider"
+              >
+                <p className="font-medium text-slate-950">Provider Queue</p>
+                <p className="text-slate-600">
+                  Review upcoming visits and launch encounter actions.
+                </p>
+              </Link>
+              <Link
+                className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
+                href="/provider/patients"
+              >
+                <p className="font-medium text-slate-950">Patients Dashboard</p>
+                <p className="text-slate-600">
+                  View organization patient data, appointments, and history.
+                </p>
+              </Link>
+            </div>
+          ) : null}
+          {isAdmin ? (
             <Link
               className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
-              href="/provider"
+              href="/organizations"
             >
-              <p className="font-medium text-slate-950">Provider Queue</p>
+              <p className="font-medium text-slate-950">Organizations</p>
               <p className="text-slate-600">
-                Review upcoming visits and launch encounter actions.
+                Review all organizations and top-level operational counts.
               </p>
             </Link>
           ) : (
             <div className="rounded-xl border border-dashed border-slate-900/25 bg-white p-3">
-              <p className="font-medium text-slate-950">Provider Queue</p>
-              <p className="text-slate-600">Available for provider role accounts.</p>
+              <p className="font-medium text-slate-950">Organization Access</p>
+              <p className="text-slate-600">
+                Admin role unlocks cross-organization visibility.
+              </p>
             </div>
           )}
         </CardContent>
@@ -94,7 +125,13 @@ export default async function DashboardPage() {
             <CardTitle className="text-cyan-950">Patient Intake</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
-            <PatientProfileForm initialProfile={initialProfile} />
+            {role === "patient" ? (
+              <PatientProfileForm initialProfile={initialProfile} />
+            ) : (
+              <p className="text-slate-700">
+                Patient intake form is only available for patient accounts.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>

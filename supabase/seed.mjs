@@ -5,7 +5,9 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? process.env.SUPABAS
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error("Missing env vars: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
+  throw new Error(
+    "Missing env vars: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.",
+  );
 }
 
 const DEFAULT_PROVIDER_COUNT = 4;
@@ -16,6 +18,9 @@ const DEFAULT_ENCOUNTER_COUNT = 16;
 const DEFAULT_NOTE_COUNT = 10;
 const DEFAULT_AUDIT_LOG_COUNT = 40;
 
+const SEED_ORG_SLUG = "seed-org";
+const SEED_ORG_NAME = "Seed Organization";
+
 const readIntEnv = (name, fallback) => {
   const raw = process.env[name];
   if (!raw) return fallback;
@@ -25,8 +30,14 @@ const readIntEnv = (name, fallback) => {
 
 const providerCount = readIntEnv("SEED_PROVIDER_COUNT", DEFAULT_PROVIDER_COUNT);
 const patientCount = readIntEnv("SEED_PATIENT_COUNT", DEFAULT_PATIENT_COUNT);
-const slotsPerProvider = readIntEnv("SEED_SLOTS_PER_PROVIDER", DEFAULT_SLOTS_PER_PROVIDER);
-const appointmentCount = readIntEnv("SEED_APPOINTMENT_COUNT", DEFAULT_APPOINTMENT_COUNT);
+const slotsPerProvider = readIntEnv(
+  "SEED_SLOTS_PER_PROVIDER",
+  DEFAULT_SLOTS_PER_PROVIDER,
+);
+const appointmentCount = readIntEnv(
+  "SEED_APPOINTMENT_COUNT",
+  DEFAULT_APPOINTMENT_COUNT,
+);
 const encounterCount = readIntEnv("SEED_ENCOUNTER_COUNT", DEFAULT_ENCOUNTER_COUNT);
 const noteCount = readIntEnv("SEED_NOTE_COUNT", DEFAULT_NOTE_COUNT);
 const auditLogCount = readIntEnv("SEED_AUDIT_LOG_COUNT", DEFAULT_AUDIT_LOG_COUNT);
@@ -53,10 +64,12 @@ const createUser = async (role) => {
   });
 
   if (error || !data.user) {
-    throw new Error(`Failed to create ${role} user: ${error?.message ?? "Unknown error"}`);
+    throw new Error(
+      `Failed to create ${role} user: ${error?.message ?? "Unknown error"}`,
+    );
   }
 
-  return { id: data.user.id, email, firstName, lastName };
+  return { id: data.user.id, email, firstName, lastName, role };
 };
 
 const buildSlotsForProvider = (providerId, count) => {
@@ -67,7 +80,7 @@ const buildSlotsForProvider = (providerId, count) => {
 
   while (slots.length < count && attempts < maxAttempts) {
     attempts += 1;
-    const dayOffset = faker.number.int({ min: -7, max: 14 });
+    const dayOffset = faker.number.int({ min: -30, max: 20 });
     const hour = faker.helpers.arrayElement([9, 10, 11, 13, 14, 15, 16]);
     const minute = faker.helpers.arrayElement([0, 30]);
 
@@ -79,9 +92,7 @@ const buildSlotsForProvider = (providerId, count) => {
     endsAt.setUTCMinutes(endsAt.getUTCMinutes() + 30);
     const slotKey = `${providerId}:${startsAt.toISOString()}:${endsAt.toISOString()}`;
 
-    if (seen.has(slotKey)) {
-      continue;
-    }
+    if (seen.has(slotKey)) continue;
     seen.add(slotKey);
 
     slots.push({
@@ -101,14 +112,63 @@ const buildSlotsForProvider = (providerId, count) => {
   return slots;
 };
 
-const appointmentStatus = () => faker.helpers.arrayElement(["confirmed", "confirmed", "confirmed", "cancelled"]);
+const appointmentStatus = () =>
+  faker.helpers.arrayElement(["confirmed", "confirmed", "confirmed", "cancelled"]);
 
-const encounterStatus = () => faker.helpers.arrayElement(["active", "connected", "completed"]);
+const encounterStatus = () =>
+  faker.helpers.arrayElement(["active", "connected", "completed"]);
 
 const noteType = () => faker.helpers.arrayElement(["soap", "progress"]);
 
+const tableExists = async (table) => {
+  const { error } = await supabase.from(table).select("id", { head: true, count: "exact" });
+  return !error;
+};
+
+const columnExists = async (table, column) => {
+  const { error } = await supabase.from(table).select(column).limit(1);
+  return !error;
+};
+
+const ensureSeedOrganization = async () => {
+  const { data, error } = await supabase
+    .from("organizations")
+    .upsert({ slug: SEED_ORG_SLUG, name: SEED_ORG_NAME }, { onConflict: "slug" })
+    .select("id")
+    .single();
+
+  if (error) {
+    const message = String(error.message || "").toLowerCase();
+    const missingTable =
+      message.includes("could not find the table") ||
+      message.includes("does not exist");
+    if (missingTable) {
+      return { orgId: null, hasOrganizations: false, hasMemberships: false };
+    }
+    throw new Error(
+      `Failed to upsert seed organization: ${error?.message ?? "Unknown error"}`,
+    );
+  }
+
+  if (!data) {
+    throw new Error(`Failed to upsert seed organization: ${error?.message ?? "Unknown error"}`);
+  }
+
+  const hasMemberships = await tableExists("organization_memberships");
+  return { orgId: data.id, hasOrganizations: true, hasMemberships };
+};
+
 const main = async () => {
   console.log("Starting seed...");
+
+  const patientsHasOrgId = await columnExists("patients", "organization_id");
+  const slotsHasOrgId = await columnExists("provider_availability_slots", "organization_id");
+  const appointmentsHasOrgId = await columnExists("appointments", "organization_id");
+  const encountersHasOrgId = await columnExists("encounters", "organization_id");
+  const notesHasOrgId = await columnExists("clinical_notes", "organization_id");
+  const auditHasOrgId = await columnExists("audit_logs", "organization_id");
+
+  const { orgId, hasOrganizations, hasMemberships } = await ensureSeedOrganization();
 
   const providers = [];
   for (let i = 0; i < providerCount; i += 1) {
@@ -120,11 +180,33 @@ const main = async () => {
     patientUsers.push(await createUser("patient"));
   }
 
+  if (orgId && hasMemberships) {
+    const membershipRows = [...providers, ...patientUsers].map((user) => ({
+      organization_id: orgId,
+      user_id: user.id,
+      role: user.role,
+    }));
+
+    const { error: membershipError } = await supabase
+      .from("organization_memberships")
+      .upsert(membershipRows, { onConflict: "organization_id,user_id" });
+
+    if (membershipError) {
+      throw new Error(
+        `Failed to upsert organization memberships: ${membershipError.message}`,
+      );
+    }
+  }
+
   const patientRows = patientUsers.map((user) => ({
+    ...(patientsHasOrgId && orgId ? { organization_id: orgId } : {}),
     user_id: user.id,
     first_name: user.firstName,
     last_name: user.lastName,
-    date_of_birth: faker.date.birthdate({ min: 18, max: 85, mode: "age" }).toISOString().slice(0, 10),
+    date_of_birth: faker.date
+      .birthdate({ min: 18, max: 85, mode: "age" })
+      .toISOString()
+      .slice(0, 10),
   }));
 
   const { data: patients, error: patientsError } = await supabase
@@ -133,43 +215,107 @@ const main = async () => {
     .select("id,user_id,first_name,last_name");
 
   if (patientsError || !patients) {
-    throw new Error(`Failed to insert patients: ${patientsError?.message ?? "Unknown error"}`);
+    throw new Error(
+      `Failed to insert patients: ${patientsError?.message ?? "Unknown error"}`,
+    );
   }
 
-  const allSlots = providers.flatMap((provider) => buildSlotsForProvider(provider.id, slotsPerProvider));
+  const allSlots = providers.flatMap((provider) =>
+    buildSlotsForProvider(provider.id, slotsPerProvider),
+  );
 
   const { data: slots, error: slotsError } = await supabase
     .from("provider_availability_slots")
-    .insert(allSlots)
+    .insert(
+      allSlots.map((slot) => ({
+        ...(slotsHasOrgId && orgId ? { organization_id: orgId } : {}),
+        ...slot,
+      })),
+    )
     .select("id,provider_id,starts_at,ends_at");
 
   if (slotsError || !slots) {
-    throw new Error(`Failed to insert provider slots: ${slotsError?.message ?? "Unknown error"}`);
+    throw new Error(
+      `Failed to insert provider slots: ${slotsError?.message ?? "Unknown error"}`,
+    );
   }
 
-  const slotsToBook = faker.helpers.shuffle(slots).slice(0, Math.min(appointmentCount, slots.length));
-  const appointmentsInput = slotsToBook.map((slot) => {
+  const now = Date.now();
+  const sortedSlots = [...slots].sort(
+    (a, b) => Date.parse(a.starts_at) - Date.parse(b.starts_at),
+  );
+  const pastSlots = sortedSlots.filter((slot) => Date.parse(slot.ends_at) < now);
+  const remainingSlots = new Map(sortedSlots.map((slot) => [slot.id, slot]));
+
+  const appointmentsInput = [];
+
+  // Ensure patient history: each patient gets one past slot when available.
+  for (const patient of patients) {
+    if (appointmentsInput.length >= Math.min(appointmentCount, sortedSlots.length)) {
+      break;
+    }
+    const slot = pastSlots.find((candidate) => remainingSlots.has(candidate.id));
+    if (!slot) break;
+
+    appointmentsInput.push({
+      ...(appointmentsHasOrgId && orgId ? { organization_id: orgId } : {}),
+      patient_id: patient.id,
+      provider_id: slot.provider_id,
+      slot_id: slot.id,
+      starts_at: slot.starts_at,
+      ends_at: slot.ends_at,
+      status: faker.helpers.arrayElement(["confirmed", "cancelled"]),
+    });
+    remainingSlots.delete(slot.id);
+  }
+
+  const additionalSlots = faker.helpers
+    .shuffle(Array.from(remainingSlots.values()))
+    .slice(0, Math.max(Math.min(appointmentCount, sortedSlots.length) - appointmentsInput.length, 0));
+
+  for (const slot of additionalSlots) {
     const patient = faker.helpers.arrayElement(patients);
-    return {
+    appointmentsInput.push({
+      ...(appointmentsHasOrgId && orgId ? { organization_id: orgId } : {}),
       patient_id: patient.id,
       provider_id: slot.provider_id,
       slot_id: slot.id,
       starts_at: slot.starts_at,
       ends_at: slot.ends_at,
       status: appointmentStatus(),
-    };
-  });
+    });
+  }
 
   const { data: appointments, error: appointmentsError } = await supabase
     .from("appointments")
     .insert(appointmentsInput)
-    .select("id,patient_id,provider_id,starts_at,status");
+    .select("id,patient_id,provider_id,slot_id,starts_at,status");
 
   if (appointmentsError || !appointments) {
-    throw new Error(`Failed to insert appointments: ${appointmentsError?.message ?? "Unknown error"}`);
+    throw new Error(
+      `Failed to insert appointments: ${appointmentsError?.message ?? "Unknown error"}`,
+    );
   }
 
-  const confirmedAppointments = appointments.filter((appointment) => appointment.status === "confirmed");
+  const bookedSlotIds = appointments
+    .filter((appointment) => appointment.status === "confirmed")
+    .map((appointment) => appointment.slot_id);
+
+  if (bookedSlotIds.length > 0) {
+    const { error: slotUpdateError } = await supabase
+      .from("provider_availability_slots")
+      .update({ is_available: false })
+      .in("id", bookedSlotIds);
+
+    if (slotUpdateError) {
+      throw new Error(`Failed to update slot availability: ${slotUpdateError.message}`);
+    }
+  }
+
+  const confirmedAppointments = appointments.filter(
+    (appointment) => appointment.status === "confirmed",
+  );
+
   const encountersInput = faker.helpers
     .shuffle(confirmedAppointments)
     .slice(0, Math.min(encounterCount, confirmedAppointments.length))
@@ -178,10 +324,14 @@ const main = async () => {
       const startedAt = new Date(appointment.starts_at);
       const patientJoinedAt =
         status === "connected" || status === "completed"
-          ? new Date(startedAt.getTime() + faker.number.int({ min: 2, max: 12 }) * 60 * 1000)
+          ? new Date(
+              startedAt.getTime() +
+                faker.number.int({ min: 2, max: 12 }) * 60 * 1000,
+            )
           : null;
 
       return {
+        ...(encountersHasOrgId && orgId ? { organization_id: orgId } : {}),
         appointment_id: appointment.id,
         patient_id: appointment.patient_id,
         provider_id: appointment.provider_id,
@@ -197,7 +347,9 @@ const main = async () => {
     .select("id,appointment_id,patient_id,provider_id,status");
 
   if (encountersError || !encounters) {
-    throw new Error(`Failed to insert encounters: ${encountersError?.message ?? "Unknown error"}`);
+    throw new Error(
+      `Failed to insert encounters: ${encountersError?.message ?? "Unknown error"}`,
+    );
   }
 
   const noteCandidates = encounters.filter((encounter) => encounter.status !== "active");
@@ -205,6 +357,7 @@ const main = async () => {
     .shuffle(noteCandidates)
     .slice(0, Math.min(noteCount, noteCandidates.length))
     .map((encounter) => ({
+      ...(notesHasOrgId && orgId ? { organization_id: orgId } : {}),
       encounter_id: encounter.id,
       patient_id: encounter.patient_id,
       provider_id: encounter.provider_id,
@@ -224,10 +377,24 @@ const main = async () => {
   const auditInput = Array.from({ length: Math.max(auditLogCount, 0) }).map(() => {
     const actor = faker.helpers.arrayElement([...providers, ...patientUsers]);
     return {
-      event_type: faker.helpers.arrayElement(["auth", "appointment", "medical_record", "encounter"]),
+      ...(auditHasOrgId && orgId ? { organization_id: orgId } : {}),
+      event_type: faker.helpers.arrayElement([
+        "auth",
+        "appointment",
+        "medical_record",
+        "encounter",
+      ]),
       action: faker.helpers.arrayElement(["create", "update", "read"]),
-      resource_type: faker.helpers.arrayElement(["appointment", "encounter", "clinical_note", "auth_session"]),
-      resource_id: auditableResources.length > 0 ? faker.helpers.arrayElement(auditableResources) : null,
+      resource_type: faker.helpers.arrayElement([
+        "appointment",
+        "encounter",
+        "clinical_note",
+        "auth_session",
+      ]),
+      resource_id:
+        auditableResources.length > 0
+          ? faker.helpers.arrayElement(auditableResources)
+          : null,
       actor_id: actor.id,
       actor_role: faker.helpers.arrayElement(["provider", "patient"]),
       request_id: faker.string.uuid(),
@@ -245,10 +412,17 @@ const main = async () => {
     }
   }
 
+  const patientsWithHistory = new Set(
+    appointments
+      .filter((appointment) => Date.parse(appointment.starts_at) < now)
+      .map((appointment) => appointment.patient_id),
+  ).size;
+
   console.log("Seed complete.");
   console.log(
     JSON.stringify(
       {
+        organization: hasOrganizations ? (orgId ?? "unknown") : "not_available",
         providers: providers.length,
         patients: patients.length,
         slots: slots.length,
@@ -256,6 +430,7 @@ const main = async () => {
         encounters: encounters.length,
         notes: notesInput.length,
         auditLogs: auditInput.length,
+        patientsWithHistory,
       },
       null,
       2,
