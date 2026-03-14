@@ -224,3 +224,7 @@
 - `components/docs/swagger-ui-view.tsx` now uses Swagger `url` mode (`/api/docs`) instead of manual `fetch` + local state.
 - `lib/openapi/spec.ts` now returns a direct OpenAPI object (no runtime `swagger-jsdoc` processing step).
 - `app/api/docs/route.ts` sets `dynamic = \"force-dynamic\"` and `app/docs/page.tsx` now links raw spec for quick verification.
+- Fixed Swagger runtime webpack crash on `/docs`:
+- Updated `components/docs/swagger-ui-view.tsx` dynamic loader to resolve `swagger-ui-react` default export explicitly (`import(...).then((module) => module.default)`).
+- Updated `next.config.ts` to `transpilePackages: ["swagger-ui-react"]` for Next.js webpack compatibility.
+- Validation: `pnpm lint`, `pnpm typecheck`, and `pnpm build` pass.

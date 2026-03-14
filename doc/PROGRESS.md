@@ -101,3 +101,4 @@
 [2026-03-14 16:48] codex — Added `doc/API.md` with complete API endpoint documentation (contracts, role/auth constraints, envelopes, and error codes) and linked it from `README.md`.
 [2026-03-14 16:57] codex — Implemented Swagger/OpenAPI docs: added spec builder (`lib/openapi/spec.ts`), public `/api/docs` endpoint, interactive `/docs` page (`swagger-ui-react`), middleware public-route allowances, and validated via `pnpm typecheck` + `pnpm lint`.
 [2026-03-14 17:03] codex — Resolved Swagger UI hang by removing client-side manual spec fetch, rendering Swagger with `url=/api/docs`, and replacing runtime `swagger-jsdoc` generation with a direct static OpenAPI object; typecheck/lint pass.
+[2026-03-14 17:14] codex — Fixed `/docs` runtime `__webpack_modules__[moduleId] is not a function` by forcing `swagger-ui-react` default export resolution in dynamic import and adding `transpilePackages` for webpack compatibility; lint/typecheck/build pass.

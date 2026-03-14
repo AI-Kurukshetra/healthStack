@@ -258,6 +258,7 @@
 
 ## 2026-03-14 - Super Admin Clinical Note Org Fallback
 - Decision: Allow super-admin clinical note create/update to resolve organization context from target encounter/note when membership-derived organization context is missing.
+- Rationale: Platform admins may not have tenant memberships in all cases, but still need operational ability to add clinical notes from admin patient workflows.
 
 ## 2026-03-14 - API Contract Documentation Source
 - Decision: Maintain a single API reference at `doc/API.md` that documents all App Router endpoints (`app/api/*`) including request/response envelopes, role/auth access behavior, and known error codes.
@@ -270,7 +271,10 @@
 ## 2026-03-14 - Swagger Reliability Adjustment
 - Decision: Serve Swagger UI using `url: /api/docs` and avoid custom client-side spec-fetch state management.
 - Rationale: Direct URL mode is more robust and prevents UI hangs where the page remains on a loading placeholder despite spec endpoint availability.
-- Rationale: Platform admins may not have tenant memberships in all cases, but still need operational ability to add clinical notes from admin patient workflows.
+
+## 2026-03-14 - Swagger Webpack Module Interop Hardening
+- Decision: Resolve `swagger-ui-react` through explicit default-export dynamic import and transpile the package in Next config.
+- Rationale: Prevents webpack runtime module interop failures (`__webpack_modules__[moduleId] is not a function`) observed on `/docs` with Next.js 15.5.7 (webpack runtime).
 
 ## 2026-03-14 - Admin Clinical Note Entry Model
 - Decision: Permit platform admin users to create/update clinical notes through the same medical-records API pathway as providers, with encounter/org validation retained and provider-ownership constraint applied only to provider-role actors.
