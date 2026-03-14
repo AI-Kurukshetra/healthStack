@@ -1,7 +1,9 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
+import { signUpSchema } from "@/lib/validations/auth.schema";
+import { signUpWithApi } from "@/lib/api/auth-client";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,46 +17,50 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+const signUpFormSchema = signUpSchema
+  .extend({
+    repeatPassword: z.string().min(8),
+  })
+  .refine((value) => value.password === value.repeatPassword, {
+    path: ["repeatPassword"],
+    message: "Passwords do not match",
+  });
+
+type SignUpFormInput = z.infer<typeof signUpFormSchema>;
 
 export function SignUpForm({
   className,
   ...props
 }: React.ComponentPropsWithoutRef<"div">) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [repeatPassword, setRepeatPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
   const router = useRouter();
+  const form = useForm<SignUpFormInput>({
+    resolver: zodResolver(signUpFormSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+      repeatPassword: "",
+    },
+  });
 
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const supabase = createClient();
-    setIsLoading(true);
-    setError(null);
-
-    if (password !== repeatPassword) {
-      setError("Passwords do not match");
-      setIsLoading(false);
-      return;
-    }
+  const handleSignUp = form.handleSubmit(async (values) => {
+    setApiError(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/dashboard`,
-        },
+      const result = await signUpWithApi({
+        email: values.email,
+        password: values.password,
       });
-      if (error) throw error;
-      router.push("/sign-up-success");
+
+      router.push(result.data.nextPath ?? "/sign-up-success");
+      router.refresh();
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
+      setApiError(error instanceof Error ? error.message : "An error occurred");
     }
-  };
+  });
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -72,22 +78,24 @@ export function SignUpForm({
                   id="email"
                   type="email"
                   placeholder="m@example.com"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  {...form.register("email")}
                 />
+                {form.formState.errors.email?.message ? (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.email.message}
+                  </p>
+                ) : null}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
                   <Label htmlFor="password">Password</Label>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
+                <Input id="password" type="password" {...form.register("password")} />
+                {form.formState.errors.password?.message ? (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.password.message}
+                  </p>
+                ) : null}
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
@@ -96,14 +104,21 @@ export function SignUpForm({
                 <Input
                   id="repeat-password"
                   type="password"
-                  required
-                  value={repeatPassword}
-                  onChange={(e) => setRepeatPassword(e.target.value)}
+                  {...form.register("repeatPassword")}
                 />
+                {form.formState.errors.repeatPassword?.message ? (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.repeatPassword.message}
+                  </p>
+                ) : null}
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? "Creating an account..." : "Sign up"}
+              {apiError ? <p className="text-sm text-red-500">{apiError}</p> : null}
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={form.formState.isSubmitting}
+              >
+                {form.formState.isSubmitting ? "Creating an account..." : "Sign up"}
               </Button>
             </div>
             <div className="mt-4 text-center text-sm">

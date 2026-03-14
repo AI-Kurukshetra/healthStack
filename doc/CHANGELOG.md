@@ -19,3 +19,10 @@
 - Updated framework pins to Next.js `15.5.7` + `eslint-config-next 15.5.7` and fixed compatibility issues (`next.config.ts` normalization, ESLint ignores, route-type compatible auth error page typing).
 - Verified project health checks after setup: `pnpm lint` ✓, `pnpm typecheck` ✓, `pnpm test` ✓, `pnpm build` ✓.
 - Added `_bmad-output/implementation-artifacts/1-1-initialize-auth-foundation.md` as the first implementation-ready BMAD story artifact, covering auth API contracts, route guards, form refactor targets, and test expectations for `E1-S1`.
+- Replaced auth API stub with validated `/api/auth` handler supporting `sign-in`, `sign-up`, `sign-out`, and session read responses using shared API envelope helpers.
+- Refactored login/register forms to React Hook Form + Zod and routed auth mutations through `/api/auth` via a typed auth client helper.
+- Added auth test coverage: `app/api/auth/route.test.ts`, `lib/validations/auth.schema.test.ts`, `lib/api/auth-client.test.ts`, `tests/integration/api-auth.test.ts`, and `tests/e2e/auth.spec.ts` (E2E spec added; execution requires Playwright browser install).
+- Implemented patient onboarding baseline for `E1-S2`: new `patients` schema migration with RLS policies, `/api/patients` authenticated GET/POST/PATCH handlers, typed patients client helper, dashboard intake form, and route/schema tests.
+- Implemented provider role-access baseline for `E1-S3`: added `lib/auth/roles.ts`, provider-only endpoint `app/api/providers/route.ts` with 401/403 enforcement, provider dashboard page at `app/(dashboard)/provider/page.tsx`, and role authorization tests.
+- Implemented appointment availability baseline for `E2-S1`: expanded appointment availability schemas, added `/api/appointments/availability` with auth + date filtering + standardized response metadata, created patient scheduling page at `app/(dashboard)/patient/appointments/page.tsx`, and added route/schema tests.
+- Added `supabase/migrations/20260314130000_provider_availability_slots.sql` creating provider slot model, indexes, constraints, update trigger, and RLS policies for authenticated slot viewing and provider-owned writes.

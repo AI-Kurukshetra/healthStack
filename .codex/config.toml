@@ -1,15 +1,15 @@
 [agents.frontend]
 description = "Handles all UI, component, and styling work. Next.js App Router, Tailwind, shadcn/ui."
-config_file = ".codex/agents/frontend.toml"
+config_file = "agents/frontend.toml"
 
 [agents.backend]
 description = "Handles API routes, Server Actions, Supabase queries, and database migrations."
-config_file = ".codex/agents/backend.toml"
+config_file = "agents/backend.toml"
 
 [agents.tester]
 description = "Runs Vitest unit tests and triggers E2E tests via agent-browser skill."
-config_file = ".codex/agents/tester.toml"
+config_file = "agents/tester.toml"
 
 [agents.reviewer]
 description = "Reviews diffs for correctness, type safety, security, and convention compliance."
-config_file = ".codex/agents/reviewer.toml"
+config_file = "agents/reviewer.toml"

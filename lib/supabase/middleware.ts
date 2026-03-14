@@ -10,6 +10,15 @@ const publicPaths = new Set([
   "/sign-up-success",
 ]);
 
+export function isPublicPath(pathname: string): boolean {
+  return (
+    publicPaths.has(pathname) ||
+    pathname.startsWith("/auth/confirm") ||
+    pathname.startsWith("/auth/error") ||
+    pathname.startsWith("/api/auth")
+  );
+}
+
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -39,13 +48,9 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
 
-  const isPublicPath =
-    publicPaths.has(pathname) ||
-    pathname.startsWith("/auth/confirm") ||
-    pathname.startsWith("/auth/error") ||
-    pathname.startsWith("/api/auth");
+  const isPathPublic = isPublicPath(pathname);
 
-  if (!data.user && !isPublicPath) {
+  if (!data.user && !isPathPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
