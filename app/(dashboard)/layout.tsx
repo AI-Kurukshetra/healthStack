@@ -40,8 +40,8 @@ export default async function DashboardLayout({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,rgba(6,182,212,0.16),transparent_34%),radial-gradient(circle_at_88%_15%,rgba(249,115,22,0.14),transparent_26%),radial-gradient(circle_at_50%_95%,rgba(15,23,42,0.1),transparent_40%)]" />
 
       <section className="relative mx-auto w-full max-w-7xl p-4 md:p-5">
-        <div className="lg:pl-[276px]">
-          <aside className="hidden rounded-3xl border border-slate-900/10 bg-white/75 p-4 backdrop-blur-sm lg:fixed lg:top-5 lg:z-20 lg:flex lg:h-[calc(100svh-2.5rem)] lg:w-[260px] lg:flex-col" style={{ left: "20%" }}>
+        <div className="grid gap-4 lg:grid-cols-[260px_minmax(0,1fr)]">
+          <aside className="hidden rounded-3xl border border-slate-900/10 bg-white/75 p-4 backdrop-blur-sm lg:sticky lg:top-5 lg:flex lg:h-[calc(100svh-2.5rem)] lg:flex-col">
             <div className="rounded-2xl border border-slate-900/10 bg-white px-3 py-3">
               <div className="space-y-1">
                 <Link
@@ -66,7 +66,7 @@ export default async function DashboardLayout({
             </div>
           </aside>
 
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             <div className="rounded-2xl border border-slate-900/10 bg-white/65 px-4 py-3 backdrop-blur-sm lg:hidden">
               <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Menu</p>
               <div className="mt-2">

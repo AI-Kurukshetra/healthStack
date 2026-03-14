@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { isPublicPath } from "@/lib/supabase/middleware";
+import {
+  isPublicPath,
+  shouldEnforceOrganizationOnboarding,
+} from "@/lib/supabase/middleware";
 
 describe("isPublicPath", () => {
   it("marks auth routes and auth API as public", () => {
@@ -20,5 +23,14 @@ describe("isPublicPath", () => {
     expect(isPublicPath("/patient")).toBe(false);
     expect(isPublicPath("/provider")).toBe(false);
     expect(isPublicPath("/api/patients")).toBe(false);
+  });
+});
+
+describe("shouldEnforceOrganizationOnboarding", () => {
+  it("enforces onboarding only for provider and unknown roles", () => {
+    expect(shouldEnforceOrganizationOnboarding("provider")).toBe(true);
+    expect(shouldEnforceOrganizationOnboarding("unknown")).toBe(true);
+    expect(shouldEnforceOrganizationOnboarding("patient")).toBe(false);
+    expect(shouldEnforceOrganizationOnboarding("admin")).toBe(false);
   });
 });

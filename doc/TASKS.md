@@ -60,3 +60,7 @@ Legend: `[ ]` todo, `[x]` done, `[~]` in-progress, `[!]` blocked
 - [x] [2026-03-14 15:17] Improve admin patient directory to table-style detail view and make desktop dashboard sidebar fixed/non-scrollable
 - [x] [2026-03-14 15:17] Fix admin patients search behavior for multi-word terms and organization-name matching
 - [x] [2026-03-14 15:14] Remove Patient ID and User ID display from admin patient details card
+- [x] [2026-03-14 16:03] Skip onboarding redirect for `patient` role users so patients are not forced to `/onboarding`
+- [x] [2026-03-14 16:10] Add patient prescription upload flow (secure file upload API, patient records UI, and schema/policy migration)
+- [x] [2026-03-14 16:08] Fix build stability: route-handler export separation for Next route typing and verify successful production build outside sandbox restrictions
+- [x] [2026-03-14 16:14] Fix missing tenant context for new users by auto-creating default organization memberships on auth signup and backfilling unassigned users

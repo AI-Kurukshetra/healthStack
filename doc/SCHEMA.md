@@ -115,3 +115,32 @@
   - Organization members with membership role `owner` or `admin` can read tenant-scoped patient and clinical operational data within their own organization.
   - Existing patient/provider ownership policies remain in place; this migration adds privileged org-lead read visibility without broadening write permissions.
 - Notes: enables owner/admin dashboard views to inspect organization-related patient data while preserving tenant boundaries.
+
+### `20260314162000_patient_prescriptions.sql`
+- Type: schema + policy migration
+- DDL/DML:
+  - Creates `public.patient_prescriptions` with tenant and ownership references (`organization_id`, `patient_id`, `uploaded_by`), file metadata (`file_name`, `file_path`, `mime_type`, `size_bytes`), and `created_at`.
+  - Adds indexes on `patient_id`, `organization_id`, and `created_at`.
+  - Creates/updates private storage bucket `patient-prescriptions` with `file_size_limit=5242880` and allowed MIME types (`application/pdf`, `image/jpeg`, `image/png`).
+- RLS impact:
+  - Enables RLS on `public.patient_prescriptions`.
+  - Adds patient-owned SELECT policy (`patient_prescriptions_select_patient`) constrained by tenant membership and `patients.user_id = auth.uid()`.
+  - Adds patient-owned INSERT policy (`patient_prescriptions_insert_patient`) constrained by tenant membership, `uploaded_by = auth.uid()`, and patient/org ownership match.
+  - Adds storage object policies on `storage.objects` for bucket `patient-prescriptions`:
+    - INSERT allowed only for authenticated users writing under their own prefix (`name like auth.uid() || '/%'`)
+    - SELECT allowed only for authenticated users reading under their own prefix (`name like auth.uid() || '/%'`)
+- Notes: enables patient-facing prescription file upload and retrieval flows from `/api/prescriptions` and `/patient/records`.
+
+### `20260314163000_auto_membership_on_auth_signup.sql`
+- Type: data integrity + trigger migration
+- DDL/DML:
+  - Creates trigger function `public.ensure_default_org_membership_for_new_user()` (`SECURITY DEFINER`) that:
+    - Resolves `public.default_organization_id()`
+    - Derives role from `auth.users.raw_user_meta_data.role` (fallback: `patient`, with role allowlist guard)
+    - Inserts `(organization_id, user_id, role)` into `public.organization_memberships` with conflict-safe upsert behavior.
+  - Creates trigger `trg_auth_users_default_org_membership` on `auth.users` (`AFTER INSERT`) to invoke the function for every new user.
+  - Backfills memberships for existing `auth.users` rows with no membership records, assigning them to default organization with normalized role.
+- RLS impact:
+  - No policy changes.
+  - Ensures tenant-context-dependent RLS predicates (`public.is_member_of_org(...)`) can evaluate true for newly created users, avoiding false denials caused by missing membership bootstrap.
+- Notes: fixes runtime `ORG_CONTEXT_REQUIRED` errors for newly registered users by guaranteeing baseline tenant membership presence.

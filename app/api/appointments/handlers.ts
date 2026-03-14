@@ -114,7 +114,7 @@ export async function PATCH(request: Request) {
   return handleMutationRequest(request);
 }
 
-async function handleAppointmentsGet(
+export async function handleAppointmentsGet(
   repo: AppointmentsRepository,
   requestId: string,
 ) {
@@ -176,7 +176,7 @@ async function handleAppointmentsGet(
   );
 }
 
-async function handleAppointmentsMutation(
+export async function handleAppointmentsMutation(
   repo: AppointmentsRepository,
   requestId: string,
   payload: unknown,

@@ -38,7 +38,7 @@ export async function GET(request: Request) {
   }
 }
 
-async function handleProviderGet(
+export async function handleProviderGet(
   client: ProviderRouteClient,
   requestId: string,
 ) {

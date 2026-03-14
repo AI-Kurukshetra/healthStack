@@ -115,7 +115,7 @@ export async function PATCH(request: Request) {
   return handleMutationRequest(request);
 }
 
-async function handleMedicalRecordsGet(
+export async function handleMedicalRecordsGet(
   repo: MedicalRecordsRepository,
   requestId: string,
   options?: { requestedPatientId: string | null },
@@ -185,7 +185,7 @@ async function handleMedicalRecordsGet(
   );
 }
 
-async function handleMedicalRecordsMutation(
+export async function handleMedicalRecordsMutation(
   repo: MedicalRecordsRepository,
   requestId: string,
   payload: unknown,

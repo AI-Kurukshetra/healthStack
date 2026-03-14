@@ -27,7 +27,7 @@ type SidebarItem = {
 };
 
 export function DashboardSidebarNav({ role, isAdmin }: DashboardSidebarNavProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
 
   const items: SidebarItem[] = [
     {

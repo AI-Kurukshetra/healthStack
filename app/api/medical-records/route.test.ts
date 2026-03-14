@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   handleMedicalRecordsGet,
   handleMedicalRecordsMutation,
-} from "@/app/api/medical-records/route";
+} from "@/app/api/medical-records/handlers";
 
 type Repo = Parameters<typeof handleMedicalRecordsGet>[0];
 

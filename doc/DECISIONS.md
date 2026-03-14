@@ -220,6 +220,10 @@
 - Decision: Replace card-stacked patient directory rows in `/admin/patients` with a table-style layout for denser, scan-friendly operational details.
 - Rationale: Platform admins need quick cross-row comparison (DOB, org, counts, created date), which is more efficient in tabular structure than cards.
 
+## 2026-03-14 - Patient Role Bypasses Organization Onboarding Gate
+- Decision: Enforce `/onboarding` membership redirect only for `provider` and `unknown` roles; skip it for `patient` and platform `admin`.
+- Rationale: Patient-role users should not be blocked by organization onboarding and were incorrectly being redirected to `/onboarding`.
+
 ## 2026-03-14 - Desktop Sidebar Must Stay Fixed
 - Decision: Use a fixed-position sidebar on desktop (`lg:fixed`) and shift main content with left padding to avoid sidebar movement during page scroll.
 - Rationale: Keeping navigation static improves orientation and meets explicit UX requirement for a non-scrollable, always-available sidebar.
@@ -227,3 +231,15 @@
 ## 2026-03-14 - Tokenized Admin Patient Search
 - Decision: Use tokenized search terms (up to 3 tokens) for admin patient directory filters and include organization name/slug matching by resolving candidate organization IDs first.
 - Rationale: Single-string search made full-name queries appear broken; tokenized matching improves discoverability while keeping query complexity bounded.
+
+## 2026-03-14 - Patient Prescription Upload Model
+- Decision: Implement patient prescription uploads with Supabase Storage bucket `patient-prescriptions` plus a relational metadata table `public.patient_prescriptions`, exposed through a patient-only API endpoint (`/api/prescriptions`).
+- Rationale: Clinical attachments need durable file storage with auditable metadata and tenant/patient access controls; splitting blob storage from relational metadata keeps authorization and listing behavior explicit.
+
+## 2026-03-14 - Route Handler Test Import Boundary
+- Decision: Keep `route.ts` files limited to HTTP method exports and import testable business handlers from sibling `handlers.ts` modules.
+- Rationale: Next App Router enforces strict route module exports; direct helper exports from route files break production type generation/build.
+
+## 2026-03-14 - Default Organization Membership on User Creation
+- Decision: Add a database trigger on `auth.users` to auto-create a default-organization membership for newly registered users and backfill existing users without memberships.
+- Rationale: Tenant-scoped APIs require organization membership (`ORG_CONTEXT_REQUIRED` otherwise); enforcing membership at auth-user creation prevents role flows (including patient uploads) from failing due to missing tenant context.

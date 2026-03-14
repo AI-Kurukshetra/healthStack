@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   handleAppointmentsGet,
   handleAppointmentsMutation,
-} from "@/app/api/appointments/route";
+} from "@/app/api/appointments/handlers";
 
 type Repo = Parameters<typeof handleAppointmentsGet>[0];
 

@@ -168,3 +168,17 @@
 - Updated `app/(dashboard)/layout.tsx` desktop shell to a fixed sidebar (`lg:fixed`, `lg:w-[260px]`) with content offset, keeping sidebar static/non-scrollable while page content scrolls.
 - Improved admin patients search in `app/(dashboard)/admin/patients/page.tsx`: multi-word tokenized query matching, safer token sanitization, and organization-name/slug based search support via organization ID expansion.
 - Removed raw identifier display from admin patient details card in `app/(dashboard)/admin/patients/[patientId]/page.tsx` by deleting `Patient ID` and `User ID` rows from the card content.
+- Updated onboarding gate in `lib/supabase/middleware.ts` to enforce organization onboarding only for `provider`/`unknown` roles, so `patient` users are not redirected to `/onboarding`.
+- Added unit assertions in `lib/supabase/middleware.test.ts` for role-based onboarding enforcement behavior.
+- Added migration `supabase/migrations/20260314162000_patient_prescriptions.sql` to create `public.patient_prescriptions`, patient-owned RLS policies, and `storage` bucket/policies for prescription uploads (`patient-prescriptions`).
+- Added `app/api/prescriptions/route.ts` patient-only upload endpoint with file type/size validation (PDF/JPG/PNG up to 5 MB), storage upload, metadata persistence, and audit event write.
+- Added `lib/validations/prescription.schema.ts` and `lib/validations/prescription.schema.test.ts` for typed prescription record parsing/validation.
+- Updated `app/(dashboard)/patient/records/page.tsx` to include uploaded prescription listing with signed download links and integrated upload area.
+- Added `components/patients/prescription-upload-form.tsx` for authenticated patient prescription file uploads with inline success/error states.
+- Added `app/api/providers/handlers.ts`, `app/api/appointments/handlers.ts`, and `app/api/medical-records/handlers.ts` for testable API handler imports outside `route.ts` modules.
+- Updated API tests to import handlers from `handlers.ts` files instead of route modules to satisfy Next App Router route export constraints.
+- Removed non-HTTP helper exports from `app/api/providers/route.ts` and `app/api/medical-records/route.ts` to prevent Next route type-generation failures.
+- Added migration `supabase/migrations/20260314163000_auto_membership_on_auth_signup.sql`:
+  - Creates trigger function `public.ensure_default_org_membership_for_new_user()` to auto-insert default-org membership when a new `auth.users` row is created.
+  - Adds trigger `trg_auth_users_default_org_membership` on `auth.users`.
+  - Backfills membership rows for existing users who had no `organization_memberships` record.

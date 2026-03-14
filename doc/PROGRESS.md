@@ -81,3 +81,7 @@
 [2026-03-14 15:17] codex — Refactored `/admin/patients` from cards to a table-style patient directory with structured columns and detail action; updated dashboard layout to a fixed desktop sidebar (`lg:fixed`) with non-scrolling sidebar panel; `pnpm lint` and `pnpm typecheck` pass.
 [2026-03-14 15:17] codex — Fixed admin patient directory search by tokenizing multi-word queries and matching patients by name/IDs plus related organization name/slug.
 [2026-03-14 15:14] codex — Removed Patient ID/User ID rows from the admin patient details card to avoid showing raw identifiers in patient-facing detail UI.
+[2026-03-14 16:03] codex — Updated onboarding middleware gating to skip patient-role users (patients no longer redirected to `/onboarding`), and added middleware unit coverage for role-based onboarding enforcement.
+[2026-03-14 16:10] codex — Added patient prescription uploads: new patient-only `/api/prescriptions` upload endpoint, `patient_prescriptions` migration + storage policies, and `/patient/records` upload/list UI with signed download links.
+[2026-03-14 16:08] codex — Resolved build blockers by moving API test imports to `handlers.ts`, removing invalid route helper exports, and confirming `pnpm build` succeeds in unsandboxed execution.
+[2026-03-14 16:14] codex — Added migration to auto-create default organization membership for new auth users (trigger on `auth.users`) and backfilled users missing any membership to resolve `ORG_CONTEXT_REQUIRED` errors.

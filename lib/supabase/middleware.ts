@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getUserRole, isPlatformAdmin, type UserRole } from "@/lib/auth/roles";
 
 const publicPaths = new Set([
   "/",
@@ -21,6 +22,10 @@ const authRedirectPaths = new Set([
 ]);
 
 const onboardingPath = "/onboarding";
+
+export function shouldEnforceOrganizationOnboarding(role: UserRole): boolean {
+  return role === "provider" || role === "unknown";
+}
 
 export function isPublicPath(pathname: string): boolean {
   return (
@@ -75,9 +80,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const isPlatformAdmin = data.user?.user_metadata?.role === "admin";
+  const role = getUserRole(data.user);
+  const userIsPlatformAdmin = isPlatformAdmin(data.user);
 
-  if (data.user && !isPathPublic && !isApiRoute && !isPlatformAdmin) {
+  if (
+    data.user &&
+    !isPathPublic &&
+    !isApiRoute &&
+    !userIsPlatformAdmin &&
+    shouldEnforceOrganizationOnboarding(role)
+  ) {
     const { data: memberships, error: membershipError } = await supabase
       .from("organization_memberships")
       .select("id")
