@@ -3,6 +3,7 @@ import { isPublicPath } from "@/lib/supabase/middleware";
 
 describe("isPublicPath", () => {
   it("marks auth routes and auth API as public", () => {
+    expect(isPublicPath("/pricing")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/register")).toBe(true);
     expect(isPublicPath("/forgot-password")).toBe(true);

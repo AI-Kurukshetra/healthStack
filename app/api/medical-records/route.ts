@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/response";
 import { getRequestId } from "@/lib/api/request-id";
 import { getUserRole } from "@/lib/auth/roles";
+import { getPrimaryOrganizationIdForUser } from "@/lib/auth/tenant";
 import { insertAuditEvent } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -34,6 +35,7 @@ type EncounterRecord = {
 
 type MedicalRecordsRepository = {
   getAuthUser: () => Promise<AuthUser | null>;
+  getCurrentOrganizationId?: (userId: string) => Promise<string | null>;
   logAuditEvent: (event: {
     eventType: string;
     action: string;
@@ -42,13 +44,24 @@ type MedicalRecordsRepository = {
     actorId?: string;
     actorRole: string;
     requestId: string;
+    organizationId: string;
     metadata?: Record<string, unknown>;
   }) => Promise<void>;
   getPatientIdByUserId: (userId: string) => Promise<string | null>;
-  getEncounterById: (encounterId: string) => Promise<EncounterRecord | null>;
-  getNoteById: (noteId: string) => Promise<MedicalRecordRecord | null>;
-  getNoteByEncounterId: (encounterId: string) => Promise<MedicalRecordRecord | null>;
+  getEncounterById: (
+    encounterId: string,
+    organizationId: string,
+  ) => Promise<EncounterRecord | null>;
+  getNoteById: (
+    noteId: string,
+    organizationId: string,
+  ) => Promise<MedicalRecordRecord | null>;
+  getNoteByEncounterId: (
+    encounterId: string,
+    organizationId: string,
+  ) => Promise<MedicalRecordRecord | null>;
   createNote: (input: {
+    organizationId: string;
     encounterId: string;
     patientId: string;
     providerId: string;
@@ -57,12 +70,19 @@ type MedicalRecordsRepository = {
   }) => Promise<MedicalRecordRecord>;
   updateNote: (input: {
     noteId: string;
+    organizationId: string;
     noteType: "soap" | "progress";
     content: string;
     version: number;
   }) => Promise<MedicalRecordRecord>;
-  listForPatient: (patientId: string) => Promise<MedicalRecordRecord[]>;
-  listForProvider: (providerId: string) => Promise<MedicalRecordRecord[]>;
+  listForPatient: (
+    patientId: string,
+    organizationId: string,
+  ) => Promise<MedicalRecordRecord[]>;
+  listForProvider: (
+    providerId: string,
+    organizationId: string,
+  ) => Promise<MedicalRecordRecord[]>;
 };
 
 export async function GET(request: Request) {
@@ -114,6 +134,17 @@ export async function handleMedicalRecordsGet(
   }
 
   const role = getUserRole(user);
+  const organizationId = await resolveOrganizationId(repo, user.id);
+  if (!organizationId) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_CONTEXT_REQUIRED",
+        message: "No organization context found for current user.",
+        status: 403,
+      }),
+      requestId,
+    );
+  }
 
   if (role === "patient") {
     const patientId = await repo.getPatientIdByUserId(user.id);
@@ -135,12 +166,12 @@ export async function handleMedicalRecordsGet(
       );
     }
 
-    const notes = await repo.listForPatient(patientId);
+    const notes = await repo.listForPatient(patientId, organizationId);
     return createReadResponse(mapSummaries(notes), requestId);
   }
 
   if (role === "provider") {
-    const notes = await repo.listForProvider(user.id);
+    const notes = await repo.listForProvider(user.id, organizationId);
     return createReadResponse(mapSummaries(notes), requestId);
   }
 
@@ -192,21 +223,46 @@ export async function handleMedicalRecordsMutation(
     );
   }
 
+  const organizationId = await resolveOrganizationId(repo, user.id);
+  if (!organizationId) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_CONTEXT_REQUIRED",
+        message: "No organization context found for current user.",
+        status: 403,
+      }),
+      requestId,
+    );
+  }
+
   switch (parsedPayload.data.action) {
     case "create":
-      return handleCreateMedicalRecord(repo, requestId, user, parsedPayload.data);
+      return handleCreateMedicalRecord(
+        repo,
+        requestId,
+        organizationId,
+        user,
+        parsedPayload.data,
+      );
     case "update":
-      return handleUpdateMedicalRecord(repo, requestId, user, parsedPayload.data);
+      return handleUpdateMedicalRecord(
+        repo,
+        requestId,
+        organizationId,
+        user,
+        parsedPayload.data,
+      );
   }
 }
 
 async function handleCreateMedicalRecord(
   repo: MedicalRecordsRepository,
   requestId: string,
+  organizationId: string,
   user: AuthUser,
   payload: Extract<MedicalRecordMutationInput, { action: "create" }>,
 ) {
-  const encounter = await repo.getEncounterById(payload.encounterId);
+  const encounter = await repo.getEncounterById(payload.encounterId, organizationId);
 
   if (!encounter || encounter.providerId !== user.id) {
     return createErrorResponse(
@@ -219,7 +275,7 @@ async function handleCreateMedicalRecord(
     );
   }
 
-  const existing = await repo.getNoteByEncounterId(encounter.id);
+  const existing = await repo.getNoteByEncounterId(encounter.id, organizationId);
 
   if (existing) {
     return createErrorResponse(
@@ -233,6 +289,7 @@ async function handleCreateMedicalRecord(
   }
 
   const note = await repo.createNote({
+    organizationId,
     encounterId: encounter.id,
     patientId: encounter.patientId,
     providerId: encounter.providerId,
@@ -247,6 +304,7 @@ async function handleCreateMedicalRecord(
     actorId: user.id,
     actorRole: "provider",
     requestId,
+    organizationId,
     metadata: { encounterId: note.encounterId, patientId: note.patientId },
   });
 
@@ -256,10 +314,11 @@ async function handleCreateMedicalRecord(
 async function handleUpdateMedicalRecord(
   repo: MedicalRecordsRepository,
   requestId: string,
+  organizationId: string,
   user: AuthUser,
   payload: Extract<MedicalRecordMutationInput, { action: "update" }>,
 ) {
-  const existing = await repo.getNoteById(payload.noteId);
+  const existing = await repo.getNoteById(payload.noteId, organizationId);
 
   if (!existing || existing.providerId !== user.id) {
     return createErrorResponse(
@@ -274,6 +333,7 @@ async function handleUpdateMedicalRecord(
 
   const updated = await repo.updateNote({
     noteId: existing.id,
+    organizationId,
     noteType: payload.noteType,
     content: payload.content,
     version: existing.version + 1,
@@ -286,6 +346,7 @@ async function handleUpdateMedicalRecord(
     actorId: user.id,
     actorRole: "provider",
     requestId,
+    organizationId,
     metadata: { encounterId: updated.encounterId, version: updated.version },
   });
 
@@ -323,6 +384,9 @@ function createSupabaseMedicalRecordsRepository(
       if (error) return null;
       return data.user;
     },
+    async getCurrentOrganizationId(userId) {
+      return getPrimaryOrganizationIdForUser(supabase, userId);
+    },
     async logAuditEvent(event) {
       await insertAuditEvent(supabase, event);
     },
@@ -335,11 +399,12 @@ function createSupabaseMedicalRecordsRepository(
       if (error || !data) return null;
       return data.id;
     },
-    async getEncounterById(encounterId) {
+    async getEncounterById(encounterId, organizationId) {
       const { data, error } = await supabase
         .from("encounters")
         .select("id,patient_id,provider_id")
         .eq("id", encounterId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
 
@@ -349,24 +414,26 @@ function createSupabaseMedicalRecordsRepository(
         providerId: data.provider_id,
       };
     },
-    async getNoteById(noteId) {
+    async getNoteById(noteId, organizationId) {
       const { data, error } = await supabase
         .from("clinical_notes")
         .select(
           "id,encounter_id,patient_id,provider_id,note_type,content,version,created_at,updated_at",
         )
         .eq("id", noteId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
       return mapMedicalRecord(data);
     },
-    async getNoteByEncounterId(encounterId) {
+    async getNoteByEncounterId(encounterId, organizationId) {
       const { data, error } = await supabase
         .from("clinical_notes")
         .select(
           "id,encounter_id,patient_id,provider_id,note_type,content,version,created_at,updated_at",
         )
         .eq("encounter_id", encounterId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
       return mapMedicalRecord(data);
@@ -375,6 +442,7 @@ function createSupabaseMedicalRecordsRepository(
       const { data, error } = await supabase
         .from("clinical_notes")
         .insert({
+          organization_id: input.organizationId,
           encounter_id: input.encounterId,
           patient_id: input.patientId,
           provider_id: input.providerId,
@@ -406,6 +474,7 @@ function createSupabaseMedicalRecordsRepository(
           version: input.version,
         })
         .eq("id", input.noteId)
+        .eq("organization_id", input.organizationId)
         .select(
           "id,encounter_id,patient_id,provider_id,note_type,content,version,created_at,updated_at",
         )
@@ -421,24 +490,26 @@ function createSupabaseMedicalRecordsRepository(
 
       return mapMedicalRecord(data);
     },
-    async listForPatient(patientId) {
+    async listForPatient(patientId, organizationId) {
       const { data, error } = await supabase
         .from("clinical_notes")
         .select(
           "id,encounter_id,patient_id,provider_id,note_type,content,version,created_at,updated_at",
         )
         .eq("patient_id", patientId)
+        .eq("organization_id", organizationId)
         .order("updated_at", { ascending: false });
       if (error || !data) return [];
       return data.map(mapMedicalRecord);
     },
-    async listForProvider(providerId) {
+    async listForProvider(providerId, organizationId) {
       const { data, error } = await supabase
         .from("clinical_notes")
         .select(
           "id,encounter_id,patient_id,provider_id,note_type,content,version,created_at,updated_at",
         )
         .eq("provider_id", providerId)
+        .eq("organization_id", organizationId)
         .order("updated_at", { ascending: false });
       if (error || !data) return [];
       return data.map(mapMedicalRecord);
@@ -484,6 +555,17 @@ function mapSummaries(records: MedicalRecordRecord[]): MedicalRecordSummary[] {
       updatedAt: record.updatedAt,
     }),
   );
+}
+
+async function resolveOrganizationId(
+  repo: Pick<MedicalRecordsRepository, "getCurrentOrganizationId">,
+  userId: string,
+): Promise<string | null> {
+  if (!repo.getCurrentOrganizationId) {
+    return "legacy-org-context";
+  }
+
+  return repo.getCurrentOrganizationId(userId);
 }
 
 function summarize(content: string): string {

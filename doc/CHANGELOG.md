@@ -64,3 +64,51 @@
 - Improved auth UI design consistency:
 - Updated `app/(auth)/login/page.tsx` and `app/(auth)/register/page.tsx` with the same warm radial background system used in landing/dashboard and preserved split-panel layout.
 - Redesigned `components/login-form.tsx` and `components/sign-up-form.tsx` with refined headers, improved copy, cohesive input surfaces, and cyan-branded primary CTAs.
+- Extended auth UI consistency to forgot-password flow:
+- Updated `app/(auth)/forgot-password/page.tsx` to use the same split-panel background/layout pattern and landing-page back link used by login/register pages.
+- Redesigned `components/forgot-password-form.tsx` with matching card depth, typography hierarchy, input/CTA styling, and success-state navigation back to login.
+- Fixed Next.js route-export typing regression for appointment availability:
+- Added `app/api/appointments/availability/handlers.ts` and moved `handleAvailabilityGet` + route-client types there.
+- Updated `app/api/appointments/availability/route.ts` to export only valid Route fields and delegate to handler module.
+- Updated `app/api/appointments/availability/route.test.ts` to import handler from `handlers.ts`.
+- Added a new public pricing surface:
+- Created `app/pricing/page.tsx` with plan comparison cards, core-feature pricing copy, FAQ section, and public navigation CTAs.
+- Expanded landing page content in `app/page.tsx` with additional core-feature cards, capability sections (API + role-aware workflows), pricing navigation, and stronger bottom CTA band.
+- Updated `lib/supabase/middleware.ts` to treat `/pricing` as public while preserving authenticated redirects for auth-entry routes only.
+- Updated `lib/supabase/middleware.test.ts` to assert `/pricing` is recognized as a public path.
+- Improved auth form readability and right-panel brightness:
+- Updated right-side auth sections in `app/(auth)/login/page.tsx`, `app/(auth)/register/page.tsx`, and `app/(auth)/forgot-password/page.tsx` with lighter glass background/panel treatment.
+- Updated input styles in `components/login-form.tsx`, `components/sign-up-form.tsx`, `components/forgot-password-form.tsx`, and `components/update-password-form.tsx` to use higher-contrast borders/backgrounds with clearer focus styling.
+- Simplified right-side auth composition by removing form card wrappers from `app/(auth)/login/page.tsx`, `app/(auth)/register/page.tsx`, and `app/(auth)/forgot-password/page.tsx` while keeping the lighter panel background.
+- Added `components/auth-input.tsx` as a reusable custom auth field wrapper with consistent height, radius, border, focus ring, and placeholder styling.
+- Switched auth forms (`components/login-form.tsx`, `components/sign-up-form.tsx`, `components/forgot-password-form.tsx`, `components/update-password-form.tsx`) from base `Input` to `AuthInput`.
+- Updated `app/(auth)/sign-up-success/page.tsx` from legacy centered card layout to the split auth visual system with branded left panel and consistent right-side success content/actions.
+- Updated `app/(auth)/update-password/page.tsx` to the split auth layout and refactored `components/update-password-form.tsx` to match current auth form style (no legacy card wrapper, branded CTA/link treatment).
+- Updated `app/auth/error/page.tsx` from legacy centered card to the same split auth visual pattern with clearer retry/login action path.
+- Started multi-tenant white-label foundation (phase 1):
+- Added migration `supabase/migrations/20260314161000_multi_tenant_foundation.sql` creating `public.organizations` and `public.organization_memberships`, plus helper functions `public.is_member_of_org(uuid)` and `public.default_organization_id()`.
+- Added tenant keys (`organization_id`) to `patients`, `provider_availability_slots`, `appointments`, `encounters`, `clinical_notes`, and `audit_logs`, with backfill/indexes/foreign keys.
+- Added migration-time default-org + membership seeding from `auth.users` to keep current deployments functional after tenant constraints.
+- Replaced existing table RLS policies with tenant-aware variants enforcing organization membership checks alongside current role/ownership checks.
+- Added server utility `lib/auth/tenant.ts` for retrieving current-user organization memberships and selecting a current organization ID.
+- Continued multi-tenant API rollout (phase 2):
+- Updated `app/api/appointments/route.ts` to resolve organization context and enforce tenant-scoped reads/writes (slot lookup/update, list queries, appointment create/update filters) with organization-aware audit events.
+- Updated `app/api/encounters/route.ts` to resolve organization context, enforce tenant-scoped appointment/encounter lookup + list filters, and persist `organization_id` on encounter creation.
+- Updated `app/api/medical-records/route.ts` to resolve organization context, enforce tenant-scoped note/encounter lookups + list filters, persist `organization_id` on note create, and enforce org-scoped note update predicates.
+- Updated `app/api/patients/handlers.ts` patient upsert flow to require membership-derived organization context and persist `organization_id`.
+- Updated `lib/audit/log.ts` to support optional `organization_id` payloads for backward-compatible audit inserts during transition.
+- Updated migration `20260314161000_multi_tenant_foundation.sql` to assign default organization IDs at column level for tenant-keyed tables.
+- Updated `app/api/patients/route.test.ts` mocks for membership-aware patient write behavior.
+- Refactored auth layout composition for cleaner split-screen UX:
+- Updated `app/(auth)/login/page.tsx`, `app/(auth)/register/page.tsx`, and `app/(auth)/forgot-password/page.tsx` to center left-panel content (headline/copy/CTA) instead of top-bottom distribution.
+- Removed right-panel card containers from `components/login-form.tsx`, `components/sign-up-form.tsx`, and `components/forgot-password-form.tsx`; forms now render as direct content blocks with the same input/button styling.
+- Completed multi-tenant onboarding flow:
+- Added migration `supabase/migrations/20260314164000_org_onboarding_policies.sql` to allow authenticated org creation and self/admin membership inserts under RLS.
+- Added onboarding endpoint `app/api/organizations/onboarding/route.ts` with business logic in `app/api/organizations/onboarding/handlers.ts` for first-org creation + owner membership assignment.
+- Added validation schema `lib/validations/organization.schema.ts` for onboarding payload.
+- Added onboarding page `app/(dashboard)/onboarding/page.tsx` and form component `components/organizations/onboarding-form.tsx`.
+- Updated `lib/supabase/middleware.ts` to redirect authenticated users without org membership to `/onboarding` and redirect completed users away from onboarding to `/dashboard`.
+- Added test coverage `app/api/organizations/onboarding/route.test.ts`.
+- Fixed onboarding API regression causing `Unable to verify organization membership`:
+- Removed the pre-onboarding membership lookup guard in `app/api/organizations/onboarding/handlers.ts` that could fail in some environments.
+- Kept onboarding correctness through middleware gating (`/onboarding` only for users without memberships) plus slug uniqueness check and owner-membership creation.

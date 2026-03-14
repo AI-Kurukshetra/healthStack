@@ -25,15 +25,22 @@ export type PatientsRouteClient = {
   auth: {
     getUser: () => QueryResult<{ user: RouteUser | null }>;
   };
-  from: (table: "patients") => {
+  from: (table: "patients" | "organization_memberships") => {
     select: (query: string) => {
       eq: (column: "user_id", value: string) => {
         maybeSingle: () => QueryResult<DbPatientRow | null>;
+        order?: (
+          column: "created_at",
+          options: { ascending: true },
+        ) => {
+          limit: (count: 1) => QueryResult<Array<{ organization_id: string }>>;
+        };
       };
     };
     upsert: (
       value: {
         user_id: string;
+        organization_id: string;
         first_name: string;
         last_name: string;
         date_of_birth: string;
@@ -120,11 +127,24 @@ export async function handlePatientsWrite(
     return createErrorResponse(createValidationError(parsed.error), requestId);
   }
 
+  const organizationId = await getCurrentOrganizationId(client, user.id);
+  if (!organizationId) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_CONTEXT_REQUIRED",
+        message: "No organization context found for current user.",
+        status: 403,
+      }),
+      requestId,
+    );
+  }
+
   const { data, error } = await client
     .from("patients")
     .upsert(
       {
         user_id: user.id,
+        organization_id: organizationId,
         first_name: parsed.data.firstName,
         last_name: parsed.data.lastName,
         date_of_birth: parsed.data.dateOfBirth,
@@ -152,6 +172,34 @@ export async function handlePatientsWrite(
     requestId,
     "Patient profile saved.",
   );
+}
+
+async function getCurrentOrganizationId(
+  client: PatientsRouteClient,
+  userId: string,
+): Promise<string | null> {
+  const selection = client
+    .from("organization_memberships")
+    .select("organization_id")
+    .eq("user_id", userId);
+
+  if (!("order" in selection)) {
+    return null;
+  }
+
+  if (!selection.order) {
+    return null;
+  }
+
+  const { data, error } = await selection
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (error) {
+    return null;
+  }
+
+  return data?.[0]?.organization_id ?? null;
 }
 
 export async function parsePatientsJsonBody(

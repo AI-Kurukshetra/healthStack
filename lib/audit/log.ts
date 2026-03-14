@@ -2,6 +2,7 @@ export type AuditInsertClient = {
   from?: (table: "audit_logs") => {
     insert: (
       value: {
+        organization_id?: string;
         event_type: string;
         action: string;
         resource_type: string;
@@ -17,6 +18,7 @@ export type AuditInsertClient = {
 };
 
 export type AuditEvent = {
+  organizationId?: string;
   eventType: string;
   action: string;
   resourceType: string;
@@ -36,7 +38,8 @@ export async function insertAuditEvent(
   }
 
   try {
-    await client.from("audit_logs").insert({
+    const payload = {
+      ...(event.organizationId ? { organization_id: event.organizationId } : {}),
       event_type: event.eventType,
       action: event.action,
       resource_type: event.resourceType,
@@ -46,7 +49,9 @@ export async function insertAuditEvent(
       metadata: event.metadata ?? {},
       request_id: event.requestId,
       occurred_at: new Date().toISOString(),
-    });
+    };
+
+    await client.from("audit_logs").insert(payload);
   } catch {
     // Best-effort logging: mutation flows must not fail when audit insert fails.
   }

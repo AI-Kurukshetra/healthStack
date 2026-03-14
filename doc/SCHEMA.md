@@ -77,3 +77,28 @@
   - Adds insert policy (`audit_logs_insert_actor_or_anonymous`) allowing actor-owned or anonymous-safe writes
   - Adds read policy (`audit_logs_select_actor_or_admin`) limiting reads to event owner or admin role
 - Notes: supports E4-S1 auditable mutation trail for auth, appointment, and medical-record write operations.
+
+### `20260314161000_multi_tenant_foundation.sql`
+- Type: schema + data backfill + policy migration
+- DDL/DML:
+  - Creates `public.organizations` (tenant root) and `public.organization_memberships` (user-to-org mapping + per-org role).
+  - Adds helper functions:
+    - `public.is_member_of_org(uuid)` for RLS checks
+    - `public.default_organization_id()` for stable fallback/backfill behavior
+  - Inserts a default organization (`slug: default-org`) and backfills memberships for existing `auth.users`.
+  - Adds `organization_id` to `patients`, `provider_availability_slots`, `appointments`, `encounters`, `clinical_notes`, and `audit_logs`.
+  - Backfills tenant IDs for existing rows, then enforces `NOT NULL`, adds FK constraints to `organizations(id)`, and creates supporting indexes.
+- RLS impact:
+  - Enables RLS on `organizations` and `organization_memberships` with membership-scoped visibility.
+  - Rewrites prior policies on patient/scheduling/encounter/clinical-note/audit tables to include tenant membership predicates (`public.is_member_of_org(organization_id)`) in addition to existing ownership/role checks.
+- Notes: establishes phase-1 white-label multi-tenant data isolation foundation while preserving backward compatibility via default-org seed and backfill strategy.
+- Update note (same migration): tenant-keyed columns now also set column defaults to `public.default_organization_id()` on `patients`, `provider_availability_slots`, `appointments`, `encounters`, `clinical_notes`, and `audit_logs` to preserve backward compatibility for writes that have not yet been tenant-wired.
+
+### `20260314164000_org_onboarding_policies.sql`
+- Type: policy migration
+- DDL/DML:
+  - Adds authenticated insert policy on `public.organizations` (`organizations_insert_authenticated`).
+  - Adds authenticated insert policy on `public.organization_memberships` (`organization_memberships_insert_self_or_org_admin`) to allow self membership creation for onboarding and admin/owner membership management.
+- RLS impact:
+  - Enables onboarding API flows to create organization + owner membership without service-role usage.
+- Notes: supports phase-2 multi-tenant onboarding completion for newly signed-up users who do not yet have membership rows.

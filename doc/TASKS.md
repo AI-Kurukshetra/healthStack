@@ -30,3 +30,15 @@ Legend: `[ ]` todo, `[x]` done, `[~]` in-progress, `[!]` blocked
 - [x] [2026-03-14 13:32] Fix runtime Zod datetime parsing on dashboard/API validators by accepting timezone-offset ISO timestamps from Supabase
 - [x] [2026-03-14 13:35] Seed remote Supabase data and verify seeded records via direct Supabase table queries
 - [x] [2026-03-14 13:37] Improve auth UX polish by redesigning login/register pages and shared form components to match landing/dashboard visual system
+- [x] [2026-03-14 13:47] Start multi-tenant implementation (phase 1): add organizations + memberships model, tenant keys on clinical tables, and tenant-aware RLS foundations
+- [x] [2026-03-14 13:54] Continue multi-tenant implementation (phase 2): wire tenant-context enforcement into appointments/encounters/medical-records/patient-write APIs and update test coverage
+- [x] [2026-03-14 13:48] Make forgot-password UI consistent with login/register visual system (shared auth layout, card styling, and form controls)
+- [x] [2026-03-14 13:50] Fix Next.js route export typing for `/api/appointments/availability` by moving testable handler exports out of `route.ts`
+- [x] [2026-03-14 13:59] Refactor auth pages/forms UX: remove right-panel form cards for login/register/forgot and center-align left-panel content across auth routes
+- [x] [2026-03-14 14:05] Complete multi-tenant onboarding flow: add organization-creation API, onboarding UI, and middleware gate redirecting membership-missing users to `/onboarding`
+- [x] [2026-03-14 14:09] Fix onboarding API membership-verification failure by removing brittle pre-check and relying on middleware gate + org slug/membership create flow
+- [x] [2026-03-14 13:56] Add public pricing page and expand landing page sections for MVP core features (onboarding, scheduling, consultation, records, compliance)
+- [x] [2026-03-14 14:00] Lighten auth right-side section and improve auth input clarity (higher contrast borders/backgrounds and stronger focus states)
+- [x] [2026-03-14 14:02] Remove right-side auth panel card wrappers from login/register/forgot-password while keeping lighter panel background
+- [x] [2026-03-14 14:04] Implement custom auth input component and apply it across login/register/forgot-password/update-password forms
+- [x] [2026-03-14 14:14] Make `/sign-up-success`, `/update-password`, and `/auth/error` UI consistent with split auth layout and current auth form styling

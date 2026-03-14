@@ -103,3 +103,51 @@
 ## 2026-03-14 - Auth Surface Visual Parity
 - Decision: Keep login/register pages and form components on the same visual system as landing/dashboard (shared background treatment, card depth, input styling, and CTA color language).
 - Rationale: Auth is a high-frequency first impression; visual parity reduces perceived fragmentation between public and authenticated experiences.
+
+## 2026-03-14 - Password Recovery Visual Consistency
+- Decision: Align forgot-password UI (`/forgot-password`) to the same split-panel auth shell and branded form styling used by login/register.
+- Rationale: Password recovery is part of the same auth journey, so consistent visual language improves trust and reduces UX fragmentation during account access workflows.
+
+## 2026-03-14 - Route Handler Export Boundary (Availability Route)
+- Decision: Move appointment-availability business handler exports to `app/api/appointments/availability/handlers.ts` and keep `route.ts` limited to `GET` export.
+- Rationale: Next.js App Router route modules reject non-HTTP exports during type generation; separating handlers preserves testability without violating route export constraints.
+
+## 2026-03-14 - Public Pricing Route Behavior
+- Decision: Introduce `/pricing` as a public marketing route and exclude it from the authenticated-user auto-redirect list used for auth-entry pages.
+- Rationale: Pricing should remain publicly browsable by both anonymous and signed-in users, while login/register/forgot-password continue redirecting authenticated users to `/dashboard`.
+
+## 2026-03-14 - Auth Right-Panel Readability Adjustment
+- Decision: Use a lighter right-side form panel treatment on auth split layouts and increase input-field contrast/focus visibility across auth forms.
+- Rationale: The prior right panel and field surfaces reduced readability; stronger contrast and clearer focus states improve form completion and accessibility.
+
+## 2026-03-14 - Auth Right-Panel Wrapper Simplification
+- Decision: Remove decorative right-side form-card wrappers from split auth pages while retaining the lighter panel background.
+- Rationale: The extra wrapper layer added unnecessary visual weight; removing it keeps the layout cleaner and makes form content feel more direct.
+
+## 2026-03-14 - Custom Auth Input Standardization
+- Decision: Introduce a dedicated `AuthInput` wrapper component and use it across all auth form fields.
+- Rationale: Centralizing auth input styles ensures consistent custom visuals and avoids repeated per-field class overrides.
+
+## 2026-03-14 - Auth Edge-Route Visual Unification
+- Decision: Apply the same split auth layout and right-panel content styling to `/sign-up-success`, `/update-password`, and `/auth/error`.
+- Rationale: These routes are part of the same authentication journey and should not revert to the older centered-card pattern.
+
+## 2026-03-14 - Multi-Tenant Rollout Strategy (Phase 1)
+- Decision: Introduce tenant architecture in two phases, starting with schema and RLS foundations (`organizations`, memberships, `organization_id` keys, tenant membership predicates) before enforcing tenant context in every API mutation/query.
+- Rationale: This minimizes feature regression risk while establishing the non-negotiable data-isolation baseline required for white-label expansion.
+
+## 2026-03-14 - Multi-Tenant Rollout Strategy (Phase 2)
+- Decision: Enforce explicit organization context in high-risk clinical APIs first (`patients` write, `appointments`, `encounters`, `medical-records`) while keeping a legacy fallback path in repository-abstracted unit tests.
+- Rationale: This secures core data mutation/read boundaries quickly without destabilizing existing test harnesses; non-critical routes can be upgraded next.
+
+## 2026-03-14 - Auth Split Layout Balance
+- Decision: Remove right-panel form cards on auth routes and center left-panel content blocks to reduce visual imbalance in the split layout.
+- Rationale: Card framing on one side plus unconstrained hero panel on the other created uneven weight; flatter form presentation and centered left content produce a cleaner, more consistent auth experience.
+
+## 2026-03-14 - Onboarding Gate for Tenant Completion
+- Decision: Enforce a middleware gate that routes authenticated users without organization memberships to `/onboarding` before allowing dashboard feature routes.
+- Rationale: Multi-tenant isolation is only meaningful when user-to-organization binding exists; this gate makes tenant context mandatory before clinical operations.
+
+## 2026-03-14 - Onboarding Membership Check Placement
+- Decision: Remove API-level pre-check for existing memberships in onboarding handler and rely on middleware route gating to determine onboarding eligibility.
+- Rationale: The pre-check introduced avoidable failure points; middleware already enforces onboarding entry conditions, while API keeps only critical validations (auth, slug uniqueness, create operations).

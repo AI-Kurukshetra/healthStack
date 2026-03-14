@@ -10,6 +10,7 @@ type RouteFrom = RouteClient["from"];
 
 function createRouteClient(options?: {
   user?: { id: string; email?: string | null } | null;
+  organizationId?: string;
   profileRow?: {
     id: string;
     user_id: string;
@@ -33,6 +34,18 @@ function createRouteClient(options?: {
         maybeSingle: async () => ({
           data: options?.profileRow ?? null,
           error: null,
+        }),
+        order: () => ({
+          limit: async () => ({
+            data: [
+              {
+                organization_id:
+                  options?.organizationId ??
+                  "5d2f64df-ad2b-4e2c-a667-3c8bc3f5fbc5",
+              },
+            ],
+            error: null,
+          }),
         }),
       }),
     }),

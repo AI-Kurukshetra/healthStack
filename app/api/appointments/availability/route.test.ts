@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleAvailabilityGet } from "@/app/api/appointments/availability/route";
+import { handleAvailabilityGet } from "@/app/api/appointments/availability/handlers";
 
 type RouteClient = Parameters<typeof handleAvailabilityGet>[0];
 type RouteAuth = RouteClient["auth"];

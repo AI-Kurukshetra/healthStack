@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/response";
 import { getRequestId } from "@/lib/api/request-id";
 import { getUserRole } from "@/lib/auth/roles";
+import { getPrimaryOrganizationIdForUser } from "@/lib/auth/tenant";
 import { createClient } from "@/lib/supabase/server";
 import {
   encounterMutationSchema,
@@ -32,13 +33,22 @@ type AppointmentRecord = {
 
 type EncountersRepository = {
   getAuthUser: () => Promise<AuthUser | null>;
+  getCurrentOrganizationId: (userId: string) => Promise<string | null>;
   getPatientIdByUserId: (userId: string) => Promise<string | null>;
-  getAppointmentById: (appointmentId: string) => Promise<AppointmentRecord | null>;
-  getEncounterById: (encounterId: string) => Promise<EncounterRecord | null>;
+  getAppointmentById: (
+    appointmentId: string,
+    organizationId: string,
+  ) => Promise<AppointmentRecord | null>;
+  getEncounterById: (
+    encounterId: string,
+    organizationId: string,
+  ) => Promise<EncounterRecord | null>;
   getEncounterByAppointmentId: (
     appointmentId: string,
+    organizationId: string,
   ) => Promise<EncounterRecord | null>;
   createEncounter: (input: {
+    organizationId: string;
     appointmentId: string;
     patientId: string;
     providerId: string;
@@ -48,14 +58,21 @@ type EncountersRepository = {
   }) => Promise<EncounterRecord>;
   updateEncounter: (
     encounterId: string,
+    organizationId: string,
     input: Partial<{
       status: "active" | "connected" | "completed";
       startedAt: string | null;
       patientJoinedAt: string | null;
     }>,
   ) => Promise<EncounterRecord>;
-  listForPatient: (patientId: string) => Promise<EncounterRecord[]>;
-  listForProvider: (providerId: string) => Promise<EncounterRecord[]>;
+  listForPatient: (
+    patientId: string,
+    organizationId: string,
+  ) => Promise<EncounterRecord[]>;
+  listForProvider: (
+    providerId: string,
+    organizationId: string,
+  ) => Promise<EncounterRecord[]>;
 };
 
 export async function GET(request: Request) {
@@ -103,9 +120,20 @@ async function handleEncountersGet(
   }
 
   const role = getUserRole(user);
+  const organizationId = await repo.getCurrentOrganizationId(user.id);
+  if (!organizationId) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_CONTEXT_REQUIRED",
+        message: "No organization context found for current user.",
+        status: 403,
+      }),
+      requestId,
+    );
+  }
 
   if (role === "provider") {
-    const encounters = await repo.listForProvider(user.id);
+    const encounters = await repo.listForProvider(user.id, organizationId);
     return createReadResponse(encounters, requestId);
   }
 
@@ -115,7 +143,7 @@ async function handleEncountersGet(
       return createReadResponse([], requestId);
     }
 
-    const encounters = await repo.listForPatient(patientId);
+    const encounters = await repo.listForPatient(patientId, organizationId);
     return createReadResponse(encounters, requestId);
   }
 
@@ -156,19 +184,50 @@ async function handleEncountersMutation(
     );
   }
 
+  const organizationId = await repo.getCurrentOrganizationId(user.id);
+  if (!organizationId) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_CONTEXT_REQUIRED",
+        message: "No organization context found for current user.",
+        status: 403,
+      }),
+      requestId,
+    );
+  }
+
   switch (parsedPayload.data.action) {
     case "start":
-      return handleStartEncounter(repo, requestId, user, parsedPayload.data);
+      return handleStartEncounter(
+        repo,
+        requestId,
+        organizationId,
+        user,
+        parsedPayload.data,
+      );
     case "join":
-      return handleJoinEncounter(repo, requestId, user, parsedPayload.data);
+      return handleJoinEncounter(
+        repo,
+        requestId,
+        organizationId,
+        user,
+        parsedPayload.data,
+      );
     case "complete":
-      return handleCompleteEncounter(repo, requestId, user, parsedPayload.data);
+      return handleCompleteEncounter(
+        repo,
+        requestId,
+        organizationId,
+        user,
+        parsedPayload.data,
+      );
   }
 }
 
 async function handleStartEncounter(
   repo: EncountersRepository,
   requestId: string,
+  organizationId: string,
   user: AuthUser,
   payload: Extract<EncounterMutationInput, { action: "start" }>,
 ) {
@@ -183,7 +242,10 @@ async function handleStartEncounter(
     );
   }
 
-  const appointment = await repo.getAppointmentById(payload.appointmentId);
+  const appointment = await repo.getAppointmentById(
+    payload.appointmentId,
+    organizationId,
+  );
 
   if (!appointment || appointment.providerId !== user.id) {
     return createErrorResponse(
@@ -207,7 +269,10 @@ async function handleStartEncounter(
     );
   }
 
-  const existing = await repo.getEncounterByAppointmentId(appointment.id);
+  const existing = await repo.getEncounterByAppointmentId(
+    appointment.id,
+    organizationId,
+  );
 
   if (existing && existing.status !== "completed") {
     return createMutationResponse(existing, requestId, "Encounter already active.");
@@ -215,6 +280,7 @@ async function handleStartEncounter(
 
   const nowIso = new Date().toISOString();
   const encounter = await repo.createEncounter({
+    organizationId,
     appointmentId: appointment.id,
     patientId: appointment.patientId,
     providerId: appointment.providerId,
@@ -229,6 +295,7 @@ async function handleStartEncounter(
 async function handleJoinEncounter(
   repo: EncountersRepository,
   requestId: string,
+  organizationId: string,
   user: AuthUser,
   payload: Extract<EncounterMutationInput, { action: "join" }>,
 ) {
@@ -255,7 +322,10 @@ async function handleJoinEncounter(
     );
   }
 
-  const encounter = await repo.getEncounterById(payload.encounterId);
+  const encounter = await repo.getEncounterById(
+    payload.encounterId,
+    organizationId,
+  );
 
   if (!encounter || encounter.patientId !== patientId) {
     return createErrorResponse(
@@ -279,7 +349,7 @@ async function handleJoinEncounter(
     );
   }
 
-  const joined = await repo.updateEncounter(encounter.id, {
+  const joined = await repo.updateEncounter(encounter.id, organizationId, {
     status: "connected",
     patientJoinedAt: new Date().toISOString(),
   });
@@ -290,6 +360,7 @@ async function handleJoinEncounter(
 async function handleCompleteEncounter(
   repo: EncountersRepository,
   requestId: string,
+  organizationId: string,
   user: AuthUser,
   payload: Extract<EncounterMutationInput, { action: "complete" }>,
 ) {
@@ -304,7 +375,10 @@ async function handleCompleteEncounter(
     );
   }
 
-  const encounter = await repo.getEncounterById(payload.encounterId);
+  const encounter = await repo.getEncounterById(
+    payload.encounterId,
+    organizationId,
+  );
 
   if (!encounter || encounter.providerId !== user.id) {
     return createErrorResponse(
@@ -317,7 +391,7 @@ async function handleCompleteEncounter(
     );
   }
 
-  const completed = await repo.updateEncounter(encounter.id, {
+  const completed = await repo.updateEncounter(encounter.id, organizationId, {
     status: "completed",
   });
 
@@ -355,6 +429,9 @@ function createSupabaseEncountersRepository(
       if (error) return null;
       return data.user;
     },
+    async getCurrentOrganizationId(userId) {
+      return getPrimaryOrganizationIdForUser(supabase, userId);
+    },
     async getPatientIdByUserId(userId) {
       const { data, error } = await supabase
         .from("patients")
@@ -364,11 +441,12 @@ function createSupabaseEncountersRepository(
       if (error || !data) return null;
       return data.id;
     },
-    async getAppointmentById(appointmentId) {
+    async getAppointmentById(appointmentId, organizationId) {
       const { data, error } = await supabase
         .from("appointments")
         .select("id,patient_id,provider_id,status")
         .eq("id", appointmentId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
       return {
@@ -378,24 +456,26 @@ function createSupabaseEncountersRepository(
         status: data.status,
       };
     },
-    async getEncounterById(encounterId) {
+    async getEncounterById(encounterId, organizationId) {
       const { data, error } = await supabase
         .from("encounters")
         .select(
           "id,appointment_id,patient_id,provider_id,status,started_at,patient_joined_at,created_at,updated_at",
         )
         .eq("id", encounterId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
       return mapEncounter(data);
     },
-    async getEncounterByAppointmentId(appointmentId) {
+    async getEncounterByAppointmentId(appointmentId, organizationId) {
       const { data, error } = await supabase
         .from("encounters")
         .select(
           "id,appointment_id,patient_id,provider_id,status,started_at,patient_joined_at,created_at,updated_at",
         )
         .eq("appointment_id", appointmentId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
       return mapEncounter(data);
@@ -404,6 +484,7 @@ function createSupabaseEncountersRepository(
       const { data, error } = await supabase
         .from("encounters")
         .insert({
+          organization_id: input.organizationId,
           appointment_id: input.appointmentId,
           patient_id: input.patientId,
           provider_id: input.providerId,
@@ -424,7 +505,7 @@ function createSupabaseEncountersRepository(
       }
       return mapEncounter(data);
     },
-    async updateEncounter(encounterId, input) {
+    async updateEncounter(encounterId, organizationId, input) {
       const mapped = {
         status: input.status,
         started_at: input.startedAt,
@@ -434,6 +515,7 @@ function createSupabaseEncountersRepository(
         .from("encounters")
         .update(mapped)
         .eq("id", encounterId)
+        .eq("organization_id", organizationId)
         .select(
           "id,appointment_id,patient_id,provider_id,status,started_at,patient_joined_at,created_at,updated_at",
         )
@@ -447,24 +529,26 @@ function createSupabaseEncountersRepository(
       }
       return mapEncounter(data);
     },
-    async listForPatient(patientId) {
+    async listForPatient(patientId, organizationId) {
       const { data, error } = await supabase
         .from("encounters")
         .select(
           "id,appointment_id,patient_id,provider_id,status,started_at,patient_joined_at,created_at,updated_at",
         )
         .eq("patient_id", patientId)
+        .eq("organization_id", organizationId)
         .order("created_at", { ascending: false });
       if (error || !data) return [];
       return data.map(mapEncounter);
     },
-    async listForProvider(providerId) {
+    async listForProvider(providerId, organizationId) {
       const { data, error } = await supabase
         .from("encounters")
         .select(
           "id,appointment_id,patient_id,provider_id,status,started_at,patient_joined_at,created_at,updated_at",
         )
         .eq("provider_id", providerId)
+        .eq("organization_id", organizationId)
         .order("created_at", { ascending: false });
       if (error || !data) return [];
       return data.map(mapEncounter);

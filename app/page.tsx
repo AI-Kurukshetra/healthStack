@@ -33,6 +33,21 @@ const featureHighlights = [
     description:
       "Encounters, SOAP/progress notes, and patient record summaries stay connected.",
   },
+  {
+    title: "Provider workflow hub",
+    description:
+      "Upcoming queues, encounter actions, and note entry points are organized in one dashboard.",
+  },
+  {
+    title: "Patient portal visibility",
+    description:
+      "Patients can review upcoming appointments, encounter status, and record summaries.",
+  },
+  {
+    title: "Compliance baseline",
+    description:
+      "RLS-secured records, auditable events, and schema-validated writes support HIPAA-oriented operations.",
+  },
 ];
 
 const coreFlows = [
@@ -58,6 +73,22 @@ const coreFlows = [
     title: "Review patient history",
     description:
       "Patients can revisit clinical summaries while providers continue care.",
+  },
+];
+
+const capabilitySections = [
+  {
+    label: "Core APIs",
+    items: ["/auth", "/patients", "/appointments", "/medical-records"],
+  },
+  {
+    label: "Role-aware experiences",
+    items: [
+      "Patient onboarding + portal",
+      "Provider dashboard + queue",
+      "Encounter session workspace",
+      "Clinical notes and record summaries",
+    ],
   },
 ];
 
@@ -91,6 +122,12 @@ export default async function HomePage() {
             Health Stack
           </p>
           <div className="flex items-center gap-2">
+            <Link
+              href="/pricing"
+              className="rounded-full border border-transparent px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-900/20"
+            >
+              Pricing
+            </Link>
             <Link
               href="/login"
               className="rounded-full border border-slate-900/20 px-4 py-2 text-sm font-medium transition hover:border-cyan-900/50"
@@ -133,10 +170,10 @@ export default async function HomePage() {
                 Provider login
               </Link>
               <Link
-                href="/dashboard"
+                href="/pricing"
                 className="rounded-full border border-transparent px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-700 transition hover:border-slate-900/20"
               >
-                Continue to dashboard
+                View pricing
               </Link>
             </div>
           </div>
@@ -178,6 +215,54 @@ export default async function HomePage() {
               </p>
             </article>
           ))}
+        </section>
+
+        <section className="mt-12 grid gap-6 rounded-3xl border border-slate-900/10 bg-white/75 p-6 backdrop-blur-sm md:grid-cols-2 md:p-8">
+          {capabilitySections.map((section) => (
+            <article
+              key={section.label}
+              className="rounded-2xl border border-slate-900/10 bg-white px-5 py-5"
+            >
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                {section.label}
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-slate-700">
+                {section.items.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-cyan-900" />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          ))}
+        </section>
+
+        <section className="mt-10 rounded-3xl border border-slate-900/10 bg-slate-900 p-8 text-slate-100 md:p-10">
+          <p className="text-xs uppercase tracking-[0.2em] text-cyan-300">
+            Ready to launch
+          </p>
+          <h2 className="mt-4 font-[family-name:var(--font-display)] text-4xl md:text-5xl">
+            Build your virtual care workflow in one stack.
+          </h2>
+          <p className="mt-4 max-w-2xl text-sm text-slate-300 md:text-base">
+            Start with core features now and scale by role, API surface, and
+            operational depth as your clinic grows.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/register"
+              className="rounded-full bg-cyan-300 px-6 py-3 text-sm font-semibold uppercase tracking-wide text-slate-950 transition hover:bg-cyan-200"
+            >
+              Start free
+            </Link>
+            <Link
+              href="/pricing"
+              className="rounded-full border border-slate-600 px-6 py-3 text-sm font-semibold uppercase tracking-wide transition hover:border-cyan-300 hover:text-cyan-200"
+            >
+              Compare plans
+            </Link>
+          </div>
         </section>
       </div>
     </main>

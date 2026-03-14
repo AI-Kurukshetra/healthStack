@@ -3,12 +3,24 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const publicPaths = new Set([
   "/",
+  "/pricing",
   "/login",
   "/register",
   "/forgot-password",
   "/update-password",
   "/sign-up-success",
 ]);
+
+const authRedirectPaths = new Set([
+  "/",
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/update-password",
+  "/sign-up-success",
+]);
+
+const onboardingPath = "/onboarding";
 
 export function isPublicPath(pathname: string): boolean {
   return (
@@ -47,6 +59,7 @@ export async function updateSession(request: NextRequest) {
 
   const { data } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
+  const isApiRoute = pathname.startsWith("/api/");
 
   const isPathPublic = isPublicPath(pathname);
 
@@ -56,10 +69,33 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (data.user && publicPaths.has(pathname)) {
+  if (data.user && authRedirectPaths.has(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
+  }
+
+  if (data.user && !isPathPublic && !isApiRoute) {
+    const { data: memberships, error: membershipError } = await supabase
+      .from("organization_memberships")
+      .select("id")
+      .eq("user_id", data.user.id)
+      .limit(1);
+
+    const hasMembership =
+      !membershipError && Array.isArray(memberships) && memberships.length > 0;
+
+    if (!hasMembership && pathname !== onboardingPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = onboardingPath;
+      return NextResponse.redirect(url);
+    }
+
+    if (hasMembership && pathname === onboardingPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;

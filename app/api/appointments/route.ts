@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/response";
 import { getRequestId } from "@/lib/api/request-id";
 import { getUserRole } from "@/lib/auth/roles";
+import { getPrimaryOrganizationIdForUser } from "@/lib/auth/tenant";
 import { insertAuditEvent } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -34,6 +35,7 @@ type SlotRecord = {
 
 type AppointmentsRepository = {
   getAuthUser: () => Promise<AuthUser | null>;
+  getCurrentOrganizationId?: (userId: string) => Promise<string | null>;
   logAuditEvent: (event: {
     eventType: string;
     action: string;
@@ -42,21 +44,31 @@ type AppointmentsRepository = {
     actorId?: string;
     actorRole: string;
     requestId: string;
+    organizationId: string;
     metadata?: Record<string, unknown>;
   }) => Promise<void>;
   getPatientIdByUserId: (userId: string) => Promise<string | null>;
-  getSlotById: (slotId: string) => Promise<SlotRecord | null>;
-  setSlotAvailability: (slotId: string, isAvailable: boolean) => Promise<void>;
+  getSlotById: (slotId: string, organizationId: string) => Promise<SlotRecord | null>;
+  setSlotAvailability: (
+    slotId: string,
+    isAvailable: boolean,
+    organizationId: string,
+  ) => Promise<void>;
   createAppointment: (input: {
+    organizationId: string;
     patientId: string;
     providerId: string;
     slotId: string;
     startsAt: string;
     endsAt: string;
   }) => Promise<AppointmentRecord>;
-  getAppointmentById: (appointmentId: string) => Promise<AppointmentRecord | null>;
+  getAppointmentById: (
+    appointmentId: string,
+    organizationId: string,
+  ) => Promise<AppointmentRecord | null>;
   updateAppointment: (
     appointmentId: string,
+    organizationId: string,
     input: Partial<{
       providerId: string;
       slotId: string;
@@ -65,8 +77,14 @@ type AppointmentsRepository = {
       status: "confirmed" | "cancelled";
     }>,
   ) => Promise<AppointmentRecord>;
-  listAppointmentsForPatient: (patientId: string) => Promise<AppointmentRecord[]>;
-  listAppointmentsForProvider: (providerId: string) => Promise<AppointmentRecord[]>;
+  listAppointmentsForPatient: (
+    patientId: string,
+    organizationId: string,
+  ) => Promise<AppointmentRecord[]>;
+  listAppointmentsForProvider: (
+    providerId: string,
+    organizationId: string,
+  ) => Promise<AppointmentRecord[]>;
 };
 
 export async function GET(request: Request) {
@@ -114,6 +132,18 @@ export async function handleAppointmentsGet(
   }
 
   const role = getUserRole(user);
+  const organizationId = await resolveOrganizationId(repo, user.id);
+
+  if (!organizationId) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_CONTEXT_REQUIRED",
+        message: "No organization context found for current user.",
+        status: 403,
+      }),
+      requestId,
+    );
+  }
 
   if (role === "patient") {
     const patientId = await repo.getPatientIdByUserId(user.id);
@@ -121,12 +151,18 @@ export async function handleAppointmentsGet(
       return createReadResponse([], requestId);
     }
 
-    const appointments = await repo.listAppointmentsForPatient(patientId);
+    const appointments = await repo.listAppointmentsForPatient(
+      patientId,
+      organizationId,
+    );
     return createReadResponse(appointments, requestId);
   }
 
   if (role === "provider") {
-    const appointments = await repo.listAppointmentsForProvider(user.id);
+    const appointments = await repo.listAppointmentsForProvider(
+      user.id,
+      organizationId,
+    );
     return createReadResponse(appointments, requestId);
   }
 
@@ -168,6 +204,18 @@ export async function handleAppointmentsMutation(
   }
 
   const role = getUserRole(user);
+  const organizationId = await resolveOrganizationId(repo, user.id);
+
+  if (!organizationId) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_CONTEXT_REQUIRED",
+        message: "No organization context found for current user.",
+        status: 403,
+      }),
+      requestId,
+    );
+  }
 
   if (role !== "patient") {
     return createErrorResponse(
@@ -194,28 +242,44 @@ export async function handleAppointmentsMutation(
 
   switch (parsedPayload.data.action) {
     case "book":
-      return handleBook(repo, requestId, patientId, user.id, parsedPayload.data);
+      return handleBook(
+        repo,
+        requestId,
+        organizationId,
+        patientId,
+        user.id,
+        parsedPayload.data,
+      );
     case "reschedule":
       return handleReschedule(
         repo,
         requestId,
+        organizationId,
         patientId,
         user.id,
         parsedPayload.data,
       );
     case "cancel":
-      return handleCancel(repo, requestId, patientId, user.id, parsedPayload.data);
+      return handleCancel(
+        repo,
+        requestId,
+        organizationId,
+        patientId,
+        user.id,
+        parsedPayload.data,
+      );
   }
 }
 
 async function handleBook(
   repo: AppointmentsRepository,
   requestId: string,
+  organizationId: string,
   patientId: string,
   actorUserId: string,
   payload: Extract<AppointmentMutationInput, { action: "book" }>,
 ) {
-  const slot = await repo.getSlotById(payload.slotId);
+  const slot = await repo.getSlotById(payload.slotId, organizationId);
 
   if (!slot || !slot.isAvailable) {
     return createErrorResponse(
@@ -229,13 +293,14 @@ async function handleBook(
   }
 
   const appointment = await repo.createAppointment({
+    organizationId,
     patientId,
     providerId: slot.providerId,
     slotId: slot.id,
     startsAt: slot.startsAt,
     endsAt: slot.endsAt,
   });
-  await repo.setSlotAvailability(slot.id, false);
+  await repo.setSlotAvailability(slot.id, false, organizationId);
   await repo.logAuditEvent({
     eventType: "appointments.booked",
     action: "book",
@@ -244,6 +309,7 @@ async function handleBook(
     actorId: actorUserId,
     actorRole: "patient",
     requestId,
+    organizationId,
     metadata: { slotId: slot.id, providerId: slot.providerId },
   });
 
@@ -253,11 +319,15 @@ async function handleBook(
 async function handleReschedule(
   repo: AppointmentsRepository,
   requestId: string,
+  organizationId: string,
   patientId: string,
   actorUserId: string,
   payload: Extract<AppointmentMutationInput, { action: "reschedule" }>,
 ) {
-  const appointment = await repo.getAppointmentById(payload.appointmentId);
+  const appointment = await repo.getAppointmentById(
+    payload.appointmentId,
+    organizationId,
+  );
 
   if (!appointment || appointment.patientId !== patientId) {
     return createErrorResponse(
@@ -270,7 +340,7 @@ async function handleReschedule(
     );
   }
 
-  const newSlot = await repo.getSlotById(payload.newSlotId);
+  const newSlot = await repo.getSlotById(payload.newSlotId, organizationId);
 
   if (!newSlot || !newSlot.isAvailable) {
     return createErrorResponse(
@@ -283,10 +353,10 @@ async function handleReschedule(
     );
   }
 
-  await repo.setSlotAvailability(appointment.slotId, true);
-  await repo.setSlotAvailability(newSlot.id, false);
+  await repo.setSlotAvailability(appointment.slotId, true, organizationId);
+  await repo.setSlotAvailability(newSlot.id, false, organizationId);
 
-  const updated = await repo.updateAppointment(appointment.id, {
+  const updated = await repo.updateAppointment(appointment.id, organizationId, {
     providerId: newSlot.providerId,
     slotId: newSlot.id,
     startsAt: newSlot.startsAt,
@@ -301,6 +371,7 @@ async function handleReschedule(
     actorId: actorUserId,
     actorRole: "patient",
     requestId,
+    organizationId,
     metadata: {
       oldSlotId: appointment.slotId,
       newSlotId: newSlot.id,
@@ -314,11 +385,15 @@ async function handleReschedule(
 async function handleCancel(
   repo: AppointmentsRepository,
   requestId: string,
+  organizationId: string,
   patientId: string,
   actorUserId: string,
   payload: Extract<AppointmentMutationInput, { action: "cancel" }>,
 ) {
-  const appointment = await repo.getAppointmentById(payload.appointmentId);
+  const appointment = await repo.getAppointmentById(
+    payload.appointmentId,
+    organizationId,
+  );
 
   if (!appointment || appointment.patientId !== patientId) {
     return createErrorResponse(
@@ -331,8 +406,8 @@ async function handleCancel(
     );
   }
 
-  await repo.setSlotAvailability(appointment.slotId, true);
-  const updated = await repo.updateAppointment(appointment.id, {
+  await repo.setSlotAvailability(appointment.slotId, true, organizationId);
+  const updated = await repo.updateAppointment(appointment.id, organizationId, {
     status: "cancelled",
   });
   await repo.logAuditEvent({
@@ -343,6 +418,7 @@ async function handleCancel(
     actorId: actorUserId,
     actorRole: "patient",
     requestId,
+    organizationId,
     metadata: { slotId: updated.slotId },
   });
 
@@ -380,6 +456,9 @@ function createSupabaseAppointmentsRepository(
       if (error) return null;
       return data.user;
     },
+    async getCurrentOrganizationId(userId) {
+      return getPrimaryOrganizationIdForUser(supabase, userId);
+    },
     async logAuditEvent(event) {
       await insertAuditEvent(supabase, event);
     },
@@ -392,11 +471,12 @@ function createSupabaseAppointmentsRepository(
       if (error || !data) return null;
       return data.id;
     },
-    async getSlotById(slotId: string) {
+    async getSlotById(slotId: string, organizationId: string) {
       const { data, error } = await supabase
         .from("provider_availability_slots")
         .select("id,provider_id,starts_at,ends_at,is_available")
         .eq("id", slotId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
       return {
@@ -407,11 +487,12 @@ function createSupabaseAppointmentsRepository(
         isAvailable: data.is_available,
       };
     },
-    async setSlotAvailability(slotId, isAvailable) {
+    async setSlotAvailability(slotId, isAvailable, organizationId) {
       const { error } = await supabase
         .from("provider_availability_slots")
         .update({ is_available: isAvailable })
-        .eq("id", slotId);
+        .eq("id", slotId)
+        .eq("organization_id", organizationId);
       if (error) {
         throw new ApiError({
           code: "APPOINTMENT_SLOT_UPDATE_FAILED",
@@ -424,6 +505,7 @@ function createSupabaseAppointmentsRepository(
       const { data, error } = await supabase
         .from("appointments")
         .insert({
+          organization_id: input.organizationId,
           patient_id: input.patientId,
           provider_id: input.providerId,
           slot_id: input.slotId,
@@ -442,16 +524,17 @@ function createSupabaseAppointmentsRepository(
       }
       return mapAppointmentRecord(data);
     },
-    async getAppointmentById(appointmentId) {
+    async getAppointmentById(appointmentId, organizationId) {
       const { data, error } = await supabase
         .from("appointments")
         .select("id,patient_id,provider_id,slot_id,starts_at,ends_at,status")
         .eq("id", appointmentId)
+        .eq("organization_id", organizationId)
         .maybeSingle();
       if (error || !data) return null;
       return mapAppointmentRecord(data);
     },
-    async updateAppointment(appointmentId, input) {
+    async updateAppointment(appointmentId, organizationId, input) {
       const mapped = {
         provider_id: input.providerId,
         slot_id: input.slotId,
@@ -463,6 +546,7 @@ function createSupabaseAppointmentsRepository(
         .from("appointments")
         .update(mapped)
         .eq("id", appointmentId)
+        .eq("organization_id", organizationId)
         .select("id,patient_id,provider_id,slot_id,starts_at,ends_at,status")
         .single();
       if (error || !data) {
@@ -474,20 +558,22 @@ function createSupabaseAppointmentsRepository(
       }
       return mapAppointmentRecord(data);
     },
-    async listAppointmentsForPatient(patientId) {
+    async listAppointmentsForPatient(patientId, organizationId) {
       const { data, error } = await supabase
         .from("appointments")
         .select("id,patient_id,provider_id,slot_id,starts_at,ends_at,status")
         .eq("patient_id", patientId)
+        .eq("organization_id", organizationId)
         .order("starts_at", { ascending: true });
       if (error || !data) return [];
       return data.map(mapAppointmentRecord);
     },
-    async listAppointmentsForProvider(providerId) {
+    async listAppointmentsForProvider(providerId, organizationId) {
       const { data, error } = await supabase
         .from("appointments")
         .select("id,patient_id,provider_id,slot_id,starts_at,ends_at,status")
         .eq("provider_id", providerId)
+        .eq("organization_id", organizationId)
         .order("starts_at", { ascending: true });
       if (error || !data) return [];
       return data.map(mapAppointmentRecord);
@@ -521,4 +607,15 @@ async function parseJsonBody(request: Request): Promise<unknown> {
   } catch {
     throw createJsonBodyError();
   }
+}
+
+async function resolveOrganizationId(
+  repo: Pick<AppointmentsRepository, "getCurrentOrganizationId">,
+  userId: string,
+): Promise<string | null> {
+  if (!repo.getCurrentOrganizationId) {
+    return "legacy-org-context";
+  }
+
+  return repo.getCurrentOrganizationId(userId);
 }
