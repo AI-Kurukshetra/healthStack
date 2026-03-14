@@ -266,6 +266,10 @@
 ## 2026-03-14 - Swagger Delivery Model
 - Decision: Expose OpenAPI via a server-side JSON endpoint (`/api/docs`) and serve Swagger UI as a public app page (`/docs`) powered by `swagger-ui-react`.
 - Rationale: This keeps interactive API docs in-app for developers and QA while preserving a machine-readable contract endpoint that can be consumed by tooling.
+
+## 2026-03-14 - Swagger Reliability Adjustment
+- Decision: Serve Swagger UI using `url: /api/docs` and avoid custom client-side spec-fetch state management.
+- Rationale: Direct URL mode is more robust and prevents UI hangs where the page remains on a loading placeholder despite spec endpoint availability.
 - Rationale: Platform admins may not have tenant memberships in all cases, but still need operational ability to add clinical notes from admin patient workflows.
 
 ## 2026-03-14 - Admin Clinical Note Entry Model

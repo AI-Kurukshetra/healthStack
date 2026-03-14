@@ -220,3 +220,7 @@
 - Added `app/docs/page.tsx` + `components/docs/swagger-ui-view.tsx` interactive Swagger UI page.
 - Updated `app/layout.tsx` to include `swagger-ui-react` stylesheet and updated `lib/supabase/middleware.ts` public path handling for `/docs` and `/api/docs`.
 - Added Swagger dependencies in `package.json`/lockfile: `swagger-jsdoc`, `swagger-ui-react`, and typings.
+- Updated Swagger rendering strategy to address UI loading stall:
+- `components/docs/swagger-ui-view.tsx` now uses Swagger `url` mode (`/api/docs`) instead of manual `fetch` + local state.
+- `lib/openapi/spec.ts` now returns a direct OpenAPI object (no runtime `swagger-jsdoc` processing step).
+- `app/api/docs/route.ts` sets `dynamic = \"force-dynamic\"` and `app/docs/page.tsx` now links raw spec for quick verification.

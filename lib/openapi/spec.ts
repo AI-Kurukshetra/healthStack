@@ -1,5 +1,3 @@
-import swaggerJsdoc from "swagger-jsdoc";
-
 const apiErrorSchema = {
   type: "object",
   properties: {
@@ -88,8 +86,7 @@ const errorResponses = {
 };
 
 export function getOpenApiSpec(origin: string) {
-  return swaggerJsdoc({
-    definition: {
+  return {
       openapi: "3.0.3",
       info: {
         title: "Health Stack API",
@@ -897,7 +894,5 @@ export function getOpenApiSpec(origin: string) {
           },
         },
       },
-    },
-    apis: [],
-  });
+  };
 }

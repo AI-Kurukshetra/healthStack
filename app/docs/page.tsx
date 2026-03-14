@@ -14,6 +14,9 @@ export default function ApiDocsPage() {
         <p className="mt-2 text-sm text-slate-600">
           Swagger UI for the current App Router API surface.
         </p>
+        <p className="mt-1 text-xs text-slate-500">
+          Raw spec: <a className="underline" href="/api/docs">/api/docs</a>
+        </p>
       </div>
       <SwaggerUiView />
     </main>
