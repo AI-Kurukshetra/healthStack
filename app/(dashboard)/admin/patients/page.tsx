@@ -31,6 +31,8 @@ type AppointmentCountRow = {
 
 const PAGE_SIZE = 10;
 const MAX_SEARCH_TOKENS = 3;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 type AdminPatientsSearchParams = {
   q?: string;
@@ -99,12 +101,13 @@ export default async function AdminPatientsPage({
   if (searchTokens.length > 0) {
     const patientSearchClauses: string[] = [];
     for (const token of searchTokens) {
-      patientSearchClauses.push(
-        `first_name.ilike.%${token}%`,
-        `last_name.ilike.%${token}%`,
-        `id.ilike.%${token}%`,
-        `user_id.ilike.%${token}%`,
-      );
+      const isUuidToken = uuidPattern.test(token);
+
+      patientSearchClauses.push(`first_name.ilike.%${token}%`, `last_name.ilike.%${token}%`);
+
+      if (isUuidToken) {
+        patientSearchClauses.push(`id.eq.${token}`, `user_id.eq.${token}`);
+      }
     }
 
     if (organizationIdsForSearch.length > 0) {
@@ -207,7 +210,7 @@ export default async function AdminPatientsPage({
             <input
               name="q"
               defaultValue={searchTerm}
-              placeholder="Search by name, patient ID, or user ID"
+              placeholder="Search by patient name, org name, patient ID, or user ID"
               className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none ring-cyan-500 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
             />
             <button
@@ -248,7 +251,6 @@ export default async function AdminPatientsPage({
                             <p className="font-medium text-slate-950">
                               {patient.first_name} {patient.last_name}
                             </p>
-                            <p className="text-xs text-slate-500">{patient.id}</p>
                           </td>
                           <td className="px-4 py-3 text-slate-600">
                             {new Date(patient.date_of_birth).toLocaleDateString()}
@@ -258,7 +260,7 @@ export default async function AdminPatientsPage({
                               {organization?.name ?? "Unknown"}
                             </p>
                             <p className="text-xs text-slate-500">
-                              {organization?.slug ?? patient.organization_id}
+                              {organization?.slug ?? "n/a"}
                             </p>
                           </td>
                           <td className="px-4 py-3 font-medium text-slate-900">

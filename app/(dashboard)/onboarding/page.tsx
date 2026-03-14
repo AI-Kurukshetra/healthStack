@@ -14,12 +14,13 @@ export default function OrganizationOnboardingPage() {
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
             Multi-tenant Setup
           </p>
-          <CardTitle className="text-cyan-950">Create your organization workspace</CardTitle>
+          <CardTitle className="text-cyan-950">Organization setup</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-slate-700">
           <p>
-            Before using dashboard modules, create your organization. Your user
-            will be assigned as workspace owner.
+            This setup is available only to owner/admin roles and platform admins.
+            If your account is a provider without an organization assignment,
+            contact your admin.
           </p>
           <OrganizationOnboardingForm />
         </CardContent>

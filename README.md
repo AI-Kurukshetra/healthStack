@@ -2,6 +2,24 @@
 
 Health Stack is a Next.js + Supabase virtual care MVP scaffold.
 
+## Product Name
+
+Health Stack
+
+## What It Does
+
+Health Stack provides a role-based virtual care platform for:
+- patient onboarding
+- appointment scheduling
+- encounter/session tracking
+- clinical notes and patient records
+- prescription uploads
+- multi-tenant organization management
+
+## Alternative To
+
+Health Stack is an alternative to virtual-care practice platforms like **Healthie**.
+
 ## Prerequisites
 
 - Node.js 20+
@@ -39,6 +57,15 @@ To clear existing data and reseed from scratch:
 pnpm seed:reset
 ```
 
+To assign one organization to all users and patients:
+
+```bash
+pnpm org:assign-all
+```
+
+Optional env override:
+- `ASSIGN_ORG_SLUG` (defaults to `bacancy-health-network`)
+
 Optional env overrides:
 - `SEED_PROVIDER_COUNT`
 - `SEED_PATIENT_COUNT`
@@ -61,3 +88,4 @@ pnpm test
 ## Project Docs
 
 See `doc/` for PRD, tasks, progress, decisions, changelog, and schema notes.
+- API reference: `doc/API.md`

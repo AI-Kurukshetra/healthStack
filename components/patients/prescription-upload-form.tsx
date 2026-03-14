@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 
-export function PrescriptionUploadForm() {
+export function PrescriptionUploadForm({ patientId }: { patientId?: string }) {
   const router = useRouter();
   const [apiError, setApiError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -32,6 +32,9 @@ export function PrescriptionUploadForm() {
     try {
       const body = new FormData();
       body.set("file", file);
+      if (patientId) {
+        body.set("patientId", patientId);
+      }
 
       const response = await fetch("/api/prescriptions", {
         method: "POST",

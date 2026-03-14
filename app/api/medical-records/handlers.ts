@@ -36,6 +36,8 @@ type EncounterRecord = {
 type MedicalRecordsRepository = {
   getAuthUser: () => Promise<AuthUser | null>;
   getCurrentOrganizationId?: (userId: string) => Promise<string | null>;
+  getOrganizationIdForEncounter?: (encounterId: string) => Promise<string | null>;
+  getOrganizationIdForNote?: (noteId: string) => Promise<string | null>;
   logAuditEvent: (event: {
     eventType: string;
     action: string;
@@ -203,11 +205,13 @@ export async function handleMedicalRecordsMutation(
     );
   }
 
-  if (getUserRole(user) !== "provider") {
+  const role = getUserRole(user);
+
+  if (role !== "provider" && role !== "admin") {
     return createErrorResponse(
       new ApiError({
         code: "MEDICAL_RECORDS_MUTATION_FORBIDDEN",
-        message: "Only providers can manage clinical notes.",
+        message: "Only providers or admins can manage clinical notes.",
         status: 403,
       }),
       requestId,
@@ -224,7 +228,13 @@ export async function handleMedicalRecordsMutation(
   }
 
   const organizationId = await resolveOrganizationId(repo, user.id);
-  if (!organizationId) {
+  const resolvedOrganizationId =
+    organizationId ??
+    (role === "admin"
+      ? await resolveOrganizationIdForAdminMutation(repo, parsedPayload.data)
+      : null);
+
+  if (!resolvedOrganizationId) {
     return createErrorResponse(
       new ApiError({
         code: "ORG_CONTEXT_REQUIRED",
@@ -240,16 +250,18 @@ export async function handleMedicalRecordsMutation(
       return handleCreateMedicalRecord(
         repo,
         requestId,
-        organizationId,
+        resolvedOrganizationId,
         user,
+        role,
         parsedPayload.data,
       );
     case "update":
       return handleUpdateMedicalRecord(
         repo,
         requestId,
-        organizationId,
+        resolvedOrganizationId,
         user,
+        role,
         parsedPayload.data,
       );
   }
@@ -260,11 +272,12 @@ async function handleCreateMedicalRecord(
   requestId: string,
   organizationId: string,
   user: AuthUser,
+  role: ReturnType<typeof getUserRole>,
   payload: Extract<MedicalRecordMutationInput, { action: "create" }>,
 ) {
   const encounter = await repo.getEncounterById(payload.encounterId, organizationId);
 
-  if (!encounter || encounter.providerId !== user.id) {
+  if (!encounter || (role === "provider" && encounter.providerId !== user.id)) {
     return createErrorResponse(
       new ApiError({
         code: "ENCOUNTER_NOT_FOUND",
@@ -302,7 +315,7 @@ async function handleCreateMedicalRecord(
     resourceType: "clinical_note",
     resourceId: note.id,
     actorId: user.id,
-    actorRole: "provider",
+    actorRole: role,
     requestId,
     organizationId,
     metadata: { encounterId: note.encounterId, patientId: note.patientId },
@@ -316,11 +329,12 @@ async function handleUpdateMedicalRecord(
   requestId: string,
   organizationId: string,
   user: AuthUser,
+  role: ReturnType<typeof getUserRole>,
   payload: Extract<MedicalRecordMutationInput, { action: "update" }>,
 ) {
   const existing = await repo.getNoteById(payload.noteId, organizationId);
 
-  if (!existing || existing.providerId !== user.id) {
+  if (!existing || (role === "provider" && existing.providerId !== user.id)) {
     return createErrorResponse(
       new ApiError({
         code: "CLINICAL_NOTE_NOT_FOUND",
@@ -344,7 +358,7 @@ async function handleUpdateMedicalRecord(
     resourceType: "clinical_note",
     resourceId: updated.id,
     actorId: user.id,
-    actorRole: "provider",
+    actorRole: role,
     requestId,
     organizationId,
     metadata: { encounterId: updated.encounterId, version: updated.version },
@@ -386,6 +400,24 @@ function createSupabaseMedicalRecordsRepository(
     },
     async getCurrentOrganizationId(userId) {
       return getPrimaryOrganizationIdForUser(supabase, userId);
+    },
+    async getOrganizationIdForEncounter(encounterId) {
+      const { data, error } = await supabase
+        .from("encounters")
+        .select("organization_id")
+        .eq("id", encounterId)
+        .maybeSingle();
+      if (error || !data) return null;
+      return data.organization_id;
+    },
+    async getOrganizationIdForNote(noteId) {
+      const { data, error } = await supabase
+        .from("clinical_notes")
+        .select("organization_id")
+        .eq("id", noteId)
+        .maybeSingle();
+      if (error || !data) return null;
+      return data.organization_id;
     },
     async logAuditEvent(event) {
       await insertAuditEvent(supabase, event);
@@ -566,6 +598,20 @@ async function resolveOrganizationId(
   }
 
   return repo.getCurrentOrganizationId(userId);
+}
+
+async function resolveOrganizationIdForAdminMutation(
+  repo: Pick<
+    MedicalRecordsRepository,
+    "getOrganizationIdForEncounter" | "getOrganizationIdForNote"
+  >,
+  payload: MedicalRecordMutationInput,
+): Promise<string | null> {
+  if (payload.action === "create") {
+    return repo.getOrganizationIdForEncounter?.(payload.encounterId) ?? null;
+  }
+
+  return repo.getOrganizationIdForNote?.(payload.noteId) ?? null;
 }
 
 function summarize(content: string): string {

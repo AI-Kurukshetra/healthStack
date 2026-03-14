@@ -1,10 +1,13 @@
+import { AdminClinicalNoteEntryForm } from "@/components/admin/admin-clinical-note-entry-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PrescriptionUploadForm } from "@/components/patients/prescription-upload-form";
 import { isPlatformAdmin } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { appointmentRecordSchema } from "@/lib/validations/appointment.schema";
 import { medicalRecordSummarySchema } from "@/lib/validations/medical-record.schema";
 import { patientRecordSchema } from "@/lib/validations/patient.schema";
+import { prescriptionRecordSchema } from "@/lib/validations/prescription.schema";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -16,6 +19,13 @@ type OrganizationRow = {
   id: string;
   name: string;
   slug: string;
+};
+
+type EncounterRow = {
+  id: string;
+  status: "active" | "completed";
+  started_at: string;
+  ended_at: string | null;
 };
 
 export default async function AdminPatientDetailsPage({
@@ -70,7 +80,13 @@ export default async function AdminPatientDetailsPage({
     updatedAt: patientRow.updated_at,
   });
 
-  const [{ data: organizationRow }, { data: appointmentRows }, { data: noteRows }] =
+  const [
+    { data: organizationRow },
+    { data: appointmentRows },
+    { data: noteRows },
+    { data: encounterRows },
+    { data: prescriptionRows },
+  ] =
     await Promise.all([
       adminClient
         .from("organizations")
@@ -89,6 +105,18 @@ export default async function AdminPatientDetailsPage({
         )
         .eq("patient_id", patientId)
         .order("updated_at", { ascending: false }),
+      adminClient
+        .from("encounters")
+        .select("id,status,started_at,ended_at")
+        .eq("patient_id", patientId)
+        .order("started_at", { ascending: false }),
+      adminClient
+        .from("patient_prescriptions")
+        .select(
+          "id,organization_id,patient_id,uploaded_by,file_name,file_path,mime_type,size_bytes,created_at",
+        )
+        .eq("patient_id", patientId)
+        .order("created_at", { ascending: false }),
     ]);
 
   const organization = organizationRow as OrganizationRow | null;
@@ -116,6 +144,35 @@ export default async function AdminPatientDetailsPage({
       version: row.version,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+    }),
+  );
+  const existingEncounterNoteIds = new Set(
+    (noteRows ?? []).map((note) => note.encounter_id),
+  );
+  const encounterOptions = ((encounterRows ?? []) as EncounterRow[]).map((encounter) => ({
+    id: encounter.id,
+    label: `${new Date(encounter.started_at).toLocaleString()} (${encounter.status})`,
+    hasNote: existingEncounterNoteIds.has(encounter.id),
+  }));
+
+  const prescriptions = await Promise.all(
+    (prescriptionRows ?? []).map(async (row) => {
+      const { data: signedUrlData } = await adminClient.storage
+        .from("patient-prescriptions")
+        .createSignedUrl(row.file_path, 60 * 60);
+
+      return prescriptionRecordSchema.parse({
+        id: row.id,
+        organizationId: row.organization_id,
+        patientId: row.patient_id,
+        uploadedBy: row.uploaded_by,
+        fileName: row.file_name,
+        filePath: row.file_path,
+        mimeType: row.mime_type,
+        sizeBytes: row.size_bytes,
+        createdAt: row.created_at,
+        downloadUrl: signedUrlData?.signedUrl ?? null,
+      });
     }),
   );
 
@@ -199,6 +256,54 @@ export default async function AdminPatientDetailsPage({
           </CardContent>
         </Card>
       </div>
+
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-cyan-950">Add Clinical Note</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AdminClinicalNoteEntryForm encounterOptions={encounterOptions} />
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-cyan-950">Prescriptions</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <PrescriptionUploadForm patientId={patientId} />
+          {prescriptions.length === 0 ? (
+            <p className="text-sm text-slate-700">No prescriptions uploaded yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {prescriptions.map((prescription) => (
+                <li
+                  key={prescription.id}
+                  className="rounded-xl border border-slate-900/10 bg-white p-3 text-sm"
+                >
+                  <p className="font-medium text-slate-950">{prescription.fileName}</p>
+                  <p className="text-xs text-slate-500">
+                    {Math.max(1, Math.round(prescription.sizeBytes / 1024))} KB ·{" "}
+                    {new Date(prescription.createdAt).toLocaleString()}
+                  </p>
+                  {prescription.downloadUrl ? (
+                    <a
+                      href={prescription.downloadUrl}
+                      className="mt-2 inline-block text-xs font-medium text-cyan-900 underline underline-offset-4"
+                    >
+                      Download
+                    </a>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-500">
+                      Download link unavailable. Refresh and try again.
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

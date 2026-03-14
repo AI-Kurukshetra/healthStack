@@ -243,3 +243,43 @@
 ## 2026-03-14 - Default Organization Membership on User Creation
 - Decision: Add a database trigger on `auth.users` to auto-create a default-organization membership for newly registered users and backfill existing users without memberships.
 - Rationale: Tenant-scoped APIs require organization membership (`ORG_CONTEXT_REQUIRED` otherwise); enforcing membership at auth-user creation prevents role flows (including patient uploads) from failing due to missing tenant context.
+
+## 2026-03-14 - Platform Admin Prescription Upload-on-Behalf
+- Decision: Allow `admin` role to upload prescriptions on behalf of a patient by providing `patientId` to `/api/prescriptions`, and route uploaded files under the target patient's storage namespace.
+- Rationale: Platform operations need admin-assisted uploads while preserving patient access to uploaded files in their own records view.
+
+## 2026-03-14 - No Visible Raw IDs in Dashboard UI
+- Decision: Remove visible raw identifiers (patient IDs, encounter IDs, and ID-centric labels) from dashboard-facing UI copy while preserving internal routing and data keys.
+- Rationale: Operational users requested identifier-free presentation; IDs remain internal for authorization/routing but should not be exposed in page copy.
+
+## 2026-03-14 - Provider Without Membership Must Not Create Organization
+- Decision: For provider-role users with no organization membership, route to a dedicated waiting page (`/awaiting-organization`) instead of onboarding, and restrict organization creation to owner/admin memberships or platform admin role.
+- Rationale: Provider accounts should be assigned to an organization by admins rather than self-provisioning a new tenant.
+
+## 2026-03-14 - Super Admin Clinical Note Org Fallback
+- Decision: Allow super-admin clinical note create/update to resolve organization context from target encounter/note when membership-derived organization context is missing.
+
+## 2026-03-14 - API Contract Documentation Source
+- Decision: Maintain a single API reference at `doc/API.md` that documents all App Router endpoints (`app/api/*`) including request/response envelopes, role/auth access behavior, and known error codes.
+- Rationale: Consolidated API contracts reduce implementation ambiguity for frontend and integration work and provide a stable handoff artifact as route handlers evolve.
+- Rationale: Platform admins may not have tenant memberships in all cases, but still need operational ability to add clinical notes from admin patient workflows.
+
+## 2026-03-14 - Admin Clinical Note Entry Model
+- Decision: Permit platform admin users to create/update clinical notes through the same medical-records API pathway as providers, with encounter/org validation retained and provider-ownership constraint applied only to provider-role actors.
+- Rationale: Admin workflow requires operational note entry for patient support while maintaining encounter-linked data integrity and existing provider constraints.
+
+## 2026-03-14 - Bulk Organization Assignment Utility
+- Decision: Add a one-off admin utility (`supabase/assign-organization.mjs`) to backfill organization memberships for all auth users and set `patients.organization_id` consistently to a target organization.
+- Rationale: Tenant onboarding/state drift blocked role-gated patient workflows for seeded users; a deterministic bulk assignment restores consistent tenant context quickly.
+
+## 2026-03-14 - UUID-Safe Patient Directory Search
+- Decision: Use `ilike` only on text columns and use exact equality filters for UUID tokens on `id`/`user_id` in patient-directory search.
+- Rationale: Postgres rejects `ilike` on UUID columns, which caused search queries to fail and return no results.
+
+## 2026-03-14 - Admin Clinical Note UI Must Stay Visible
+- Decision: Keep admin clinical-note form always rendered in patient details; when no eligible encounters exist, show explicit warning and disable controls instead of hiding the section.
+- Rationale: Hidden sections make it unclear whether feature access exists; visible disabled state communicates availability and next action clearly.
+
+## 2026-03-14 - README Product Positioning
+- Decision: Include concise top-level README sections for product name, functional summary, and competitive alternative framing.
+- Rationale: Improves first-read clarity for stakeholders and quickly communicates market positioning without requiring deep code/docs review.

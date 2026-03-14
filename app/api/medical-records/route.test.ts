@@ -9,6 +9,9 @@ type Repo = Parameters<typeof handleMedicalRecordsGet>[0];
 function createRepo(overrides?: Partial<Repo>): Repo {
   return {
     getAuthUser: async () => null,
+    getCurrentOrganizationId: async () => "1f7af307-8ffc-4cf1-b390-a6daa34f4cb0",
+    getOrganizationIdForEncounter: async () => null,
+    getOrganizationIdForNote: async () => null,
     logAuditEvent: async () => undefined,
     getPatientIdByUserId: async () => null,
     getEncounterById: async () => null,
@@ -77,6 +80,63 @@ describe("medical records route", () => {
     expect(auditEvents).toEqual([
       { eventType: "medical_records.created", action: "create" },
     ]);
+  });
+
+  it("allows admin to create a clinical note for a patient encounter", async () => {
+    const response = await handleMedicalRecordsMutation(
+      createRepo({
+        getAuthUser: async () => ({
+          id: "8a6eb602-1084-49d4-a2de-d76dbba15cff",
+          user_metadata: { role: "admin" },
+        }),
+        getEncounterById: async () => ({
+          id: "6ef76adf-49e5-4d6d-99cc-c1d2a7f9988f",
+          patientId: "7f961b6b-b271-4c7c-86f9-29f0f4572f4d",
+          providerId: "4f28c9cc-8de6-4e24-bf75-b4502bb99825",
+        }),
+      }),
+      "req-note-create-admin",
+      {
+        action: "create",
+        encounterId: "6ef76adf-49e5-4d6d-99cc-c1d2a7f9988f",
+        noteType: "progress",
+        content: "Admin-entered note for care coordination.",
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.message).toBe("Clinical note saved.");
+  });
+
+  it("allows super admin mutation using encounter org fallback without membership", async () => {
+    const response = await handleMedicalRecordsMutation(
+      createRepo({
+        getAuthUser: async () => ({
+          id: "8a6eb602-1084-49d4-a2de-d76dbba15cff",
+          user_metadata: { role: "admin" },
+        }),
+        getCurrentOrganizationId: async () => null,
+        getOrganizationIdForEncounter: async () =>
+          "1f7af307-8ffc-4cf1-b390-a6daa34f4cb0",
+        getEncounterById: async () => ({
+          id: "6ef76adf-49e5-4d6d-99cc-c1d2a7f9988f",
+          patientId: "7f961b6b-b271-4c7c-86f9-29f0f4572f4d",
+          providerId: "4f28c9cc-8de6-4e24-bf75-b4502bb99825",
+        }),
+      }),
+      "req-note-create-admin-fallback",
+      {
+        action: "create",
+        encounterId: "6ef76adf-49e5-4d6d-99cc-c1d2a7f9988f",
+        noteType: "soap",
+        content: "Admin-entered note without membership context.",
+      },
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.message).toBe("Clinical note saved.");
   });
 
   it("updates existing note and bumps version", async () => {

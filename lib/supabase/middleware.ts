@@ -22,6 +22,7 @@ const authRedirectPaths = new Set([
 ]);
 
 const onboardingPath = "/onboarding";
+const awaitingOrganizationPath = "/awaiting-organization";
 
 export function shouldEnforceOrganizationOnboarding(role: UserRole): boolean {
   return role === "provider" || role === "unknown";
@@ -99,13 +100,25 @@ export async function updateSession(request: NextRequest) {
     const hasMembership =
       !membershipError && Array.isArray(memberships) && memberships.length > 0;
 
-    if (!hasMembership && pathname !== onboardingPath) {
+    if (role === "provider" && !hasMembership && pathname !== awaitingOrganizationPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = awaitingOrganizationPath;
+      return NextResponse.redirect(url);
+    }
+
+    if (role === "unknown" && !hasMembership && pathname !== onboardingPath) {
       const url = request.nextUrl.clone();
       url.pathname = onboardingPath;
       return NextResponse.redirect(url);
     }
 
     if (hasMembership && pathname === onboardingPath) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
+      return NextResponse.redirect(url);
+    }
+
+    if (hasMembership && pathname === awaitingOrganizationPath) {
       const url = request.nextUrl.clone();
       url.pathname = "/dashboard";
       return NextResponse.redirect(url);

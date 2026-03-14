@@ -182,3 +182,35 @@
   - Creates trigger function `public.ensure_default_org_membership_for_new_user()` to auto-insert default-org membership when a new `auth.users` row is created.
   - Adds trigger `trg_auth_users_default_org_membership` on `auth.users`.
   - Backfills membership rows for existing users who had no `organization_memberships` record.
+- Updated `app/api/prescriptions/route.ts` to allow platform admin uploads in addition to patient uploads, including admin `patientId` targeting and upload-to-patient file namespace behavior.
+- Updated `components/patients/prescription-upload-form.tsx` to support optional `patientId` form submission for admin on-behalf uploads.
+- Updated `app/(dashboard)/admin/patients/[patientId]/page.tsx` to add prescription upload/list/download section for platform admin workflows.
+- Removed visible identifier text from dashboard UI surfaces:
+  - Updated `app/(dashboard)/admin/patients/page.tsx` to remove displayed patient UUID and ID-based search hint copy.
+  - Updated `app/(dashboard)/provider/patients/[patientId]/page.tsx` to remove `Patient ID` row.
+  - Updated `app/(dashboard)/provider/patients/page.tsx` to replace patient-ID-based labels in appointments/history cards.
+  - Updated `app/(dashboard)/patient/records/page.tsx` to replace raw encounter ID label with neutral encounter text.
+  - Updated `app/(dashboard)/encounters/[encounterId]/video/page.tsx` to remove encounter ID from visible session copy.
+- Updated `lib/supabase/middleware.ts` to route membership-missing provider users to `/awaiting-organization` instead of `/onboarding`, and to redirect provider/patient users away from `/onboarding`.
+- Added `app/(dashboard)/awaiting-organization/page.tsx` to explain provider pending-assignment state.
+- Updated `app/api/organizations/onboarding/handlers.ts` to enforce organization creation permissions: only platform admin role or users with organization membership role `owner`/`admin` can create organizations.
+- Expanded onboarding API tests in `app/api/organizations/onboarding/route.test.ts` to cover owner/admin allowed and provider-forbidden behavior.
+- Updated onboarding page copy in `app/(dashboard)/onboarding/page.tsx` to reflect new owner/admin creation restriction.
+- Updated `app/api/medical-records/handlers.ts` to support super-admin clinical-note mutations without membership context by resolving organization ID from encounter (create) or note (update) when direct membership-based org lookup is unavailable.
+- Expanded medical-records unit tests in `app/api/medical-records/route.test.ts` with admin fallback coverage for note creation.
+- Updated `components/admin/admin-clinical-note-entry-form.tsx` so admin clinical-note section is always visible; when no eligible encounters are available, it now renders a warning with disabled form controls instead of hiding the inputs entirely.
+- Updated `README.md` to include explicit sections for product name, what the product does, and alternative positioning against Healthie-like virtual-care tooling.
+- Added admin clinical-note entry UI component `components/admin/admin-clinical-note-entry-form.tsx` and integrated it into `app/(dashboard)/admin/patients/[patientId]/page.tsx` with encounter selection.
+- Updated `app/api/medical-records/handlers.ts` to allow both `provider` and `admin` roles to create/update clinical notes while preserving provider ownership checks for provider role.
+- Aligned `app/api/medical-records/route.ts` to export HTTP handlers from `handlers.ts` so runtime and tests share one implementation.
+- Expanded medical records tests in `app/api/medical-records/route.test.ts` with admin note-creation coverage.
+- Updated `app/(dashboard)/dashboard/page.tsx` so patient intake form is shown only when no patient profile exists; completed profiles now render a concise "Profile on file" state.
+- Updated `components/organizations/onboarding-form.tsx` to perform deterministic post-success redirect using `window.location.assign(nextPath)`; removed `router.push` + `router.refresh` sequence that could leave users on onboarding.
+- Added `supabase/assign-organization.mjs` to assign a single organization to all auth users (organization memberships upsert) and all patient rows (`patients.organization_id`).
+- Added `pnpm org:assign-all` script in `package.json` and usage docs in `README.md`.
+- Executed assignment successfully against remote Supabase: organization `bacancy-health-network` (`fee7b2c4-9b48-4db8-b2f5-da8fe343a0d6`), 23 user memberships assigned, 18 patients updated.
+- Per-user tenant fix: cleaned organization memberships for `seed-provider-1773481187245-chkzjn3d@example.com` to retain only `bacancy-health-network` (`fee7b2c4-9b48-4db8-b2f5-da8fe343a0d6`) because primary-org resolution used oldest membership.
+- Updated `lib/supabase/middleware.ts` to remove unconditional provider redirect from `/onboarding`; provider routing now consistently uses membership-aware branch logic (`hasMembership` => `/dashboard`, missing membership => `/awaiting-organization`).
+- Fixed search in `app/(dashboard)/admin/patients/page.tsx`: removed invalid UUID `ilike` predicates (`id`, `user_id`) and replaced with UUID-aware exact-match filters (`id.eq`, `user_id.eq`) while preserving name/org token search.
+- Added API reference document `doc/API.md` covering all current `app/api/*` endpoints with request/response contracts, auth+role access rules, tenant-context notes, and mapped error-code inventory.
+- Updated `README.md` Project Docs section to link the new API reference (`doc/API.md`).

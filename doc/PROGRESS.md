@@ -85,3 +85,17 @@
 [2026-03-14 16:10] codex — Added patient prescription uploads: new patient-only `/api/prescriptions` upload endpoint, `patient_prescriptions` migration + storage policies, and `/patient/records` upload/list UI with signed download links.
 [2026-03-14 16:08] codex — Resolved build blockers by moving API test imports to `handlers.ts`, removing invalid route helper exports, and confirming `pnpm build` succeeds in unsandboxed execution.
 [2026-03-14 16:14] codex — Added migration to auto-create default organization membership for new auth users (trigger on `auth.users`) and backfilled users missing any membership to resolve `ORG_CONTEXT_REQUIRED` errors.
+[2026-03-14 16:19] codex — Extended prescription uploads for platform admin: `/api/prescriptions` now supports admin upload-on-behalf (`patientId`), admin patient details page now includes prescription upload/list/download UI.
+[2026-03-14 16:22] codex — Removed visible ID text from dashboard UI by replacing patient/encounter ID labels with non-identifier copy across admin/provider/patient/video pages.
+[2026-03-14 16:34] codex — Added provider waiting route (`/awaiting-organization`) for accounts without org membership and locked organization creation API to owner/admin memberships or platform admin role.
+[2026-03-14 16:47] codex — Fixed super-admin clinical note creation by adding admin organization-context fallback in medical-records mutation flow (resolve org from encounter/note when membership context is missing).
+[2026-03-14 16:51] codex — Updated admin clinical note form to always render section/inputs; when no eligible encounters exist, form shows clear warning and disabled controls instead of hiding UI.
+[2026-03-14 16:54] codex — Updated README with explicit product name, core capabilities summary, and “alternative to Healthie-like platforms” positioning section.
+[2026-03-14 16:26] codex — Enabled admin clinical note entry by allowing admin medical-record mutations and adding encounter-based note entry UI on `/admin/patients/[patientId]`; lint/typecheck/tests all passing.
+[2026-03-14 16:35] codex — Updated dashboard patient intake card to show the form only when profile is missing and render a profile-complete summary for existing patients.
+[2026-03-14 16:43] codex — Fixed onboarding redirect reliability by switching successful form completion to hard navigation (`window.location.assign`) instead of `router.push` + `router.refresh`.
+[2026-03-14 16:50] codex — Added and executed organization assignment script; mapped all auth users + patient rows to `bacancy-health-network` (23 memberships assigned, 18 patients updated).
+[2026-03-14 17:00] codex — Verified target provider already had assignment, then removed extra org memberships so tenant context resolves to `bacancy-health-network` only.
+[2026-03-14 17:10] codex — Fixed middleware flow that forced providers on `/onboarding` to `awaiting-organization` before membership evaluation; assigned providers now route to dashboard correctly.
+[2026-03-14 17:16] codex — Fixed admin patient directory search failure caused by UUID `ilike` filters; switched to name `ilike` + UUID exact-match clauses for patient/user IDs.
+[2026-03-14 16:48] codex — Added `doc/API.md` with complete API endpoint documentation (contracts, role/auth constraints, envelopes, and error codes) and linked it from `README.md`.

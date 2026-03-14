@@ -250,7 +250,7 @@ export default async function ProviderPatientsDashboardPage() {
                     className="rounded-xl border border-slate-900/10 bg-white p-3"
                   >
                     <p className="font-medium text-slate-950">
-                      Patient ID: {appointment.patientId}
+                      Scheduled consultation
                     </p>
                     <p className="text-xs text-slate-500">
                       {new Date(appointment.startsAt).toLocaleString()} -{" "}
@@ -287,7 +287,7 @@ export default async function ProviderPatientsDashboardPage() {
                     className="rounded-xl border border-slate-900/10 bg-white p-3"
                   >
                     <p className="text-xs uppercase tracking-wide text-slate-500">
-                      Patient {record.patientId}
+                      Patient note
                     </p>
                     <p className="font-medium capitalize text-slate-950">
                       {record.noteType} note (v{record.version})

@@ -148,7 +148,7 @@ export default async function PatientRecordsPage() {
                   className="rounded-xl border border-slate-900/10 bg-white p-3 text-sm"
                 >
                   <p className="text-xs uppercase tracking-wide text-slate-500">
-                    Encounter {record.encounterId}
+                    Clinical encounter
                   </p>
                   <p className="font-medium capitalize text-slate-950">
                     {record.noteType} note (v{record.version})

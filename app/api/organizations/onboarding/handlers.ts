@@ -1,5 +1,6 @@
 import { ApiError, createJsonBodyError, createValidationError } from "@/lib/api/errors";
 import { createErrorResponse, createMutationResponse } from "@/lib/api/response";
+import { getUserRole } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   organizationOnboardingSchema,
@@ -9,7 +10,7 @@ import {
 export type OnboardingRouteClient = {
   auth: {
     getUser: () => Promise<{
-      data: { user: { id: string } | null };
+      data: { user: { id: string; user_metadata?: { role?: string } } | null };
       error: { message?: string } | null;
     }>;
   };
@@ -19,8 +20,8 @@ type OnboardingAdminClient = {
   from: (table: "organization_memberships" | "organizations") => {
     select: (query: string) => {
       eq: (column: "user_id" | "slug", value: string) => {
-        limit: (count: 1) => Promise<{
-          data: Array<{ id?: string }> | null;
+        limit: (count: number) => Promise<{
+          data: Array<{ id?: string; role?: string }> | null;
           error: { message?: string } | null;
         }>;
       };
@@ -67,7 +68,42 @@ export async function handleOrganizationOnboardingPost(
   }
 
   const userId = authData.user.id;
+  const platformRole = getUserRole(authData.user);
   const adminClient = options?.adminClient ?? createAdminClient();
+
+  if (platformRole !== "admin") {
+    const { data: memberships, error: membershipLookupError } = await adminClient
+      .from("organization_memberships")
+      .select("role")
+      .eq("user_id", userId)
+      .limit(20);
+
+    if (membershipLookupError) {
+      return createErrorResponse(
+        new ApiError({
+          code: "ORG_ONBOARDING_MEMBERSHIP_LOOKUP_FAILED",
+          message: "Unable to verify organization permissions.",
+          status: 500,
+        }),
+        requestId,
+      );
+    }
+
+    const canCreateOrganization = (memberships ?? []).some(
+      (membership) => membership.role === "owner" || membership.role === "admin",
+    );
+
+    if (!canCreateOrganization) {
+      return createErrorResponse(
+        new ApiError({
+          code: "ORG_CREATE_FORBIDDEN",
+          message: "Only owner/admin can create organizations.",
+          status: 403,
+        }),
+        requestId,
+      );
+    }
+  }
 
   const slug = parsed.data.slug.toLowerCase();
   const { data: existingSlugRows, error: slugLookupError } = await adminClient

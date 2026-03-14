@@ -137,7 +137,20 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
             {role === "patient" ? (
-              <PatientProfileForm initialProfile={initialProfile} />
+              initialProfile ? (
+                <div className="space-y-2 text-slate-700">
+                  <p className="font-medium text-slate-950">Profile on file</p>
+                  <p>
+                    Intake profile is already completed for{" "}
+                    {initialProfile.firstName} {initialProfile.lastName}.
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    DOB: {new Date(initialProfile.dateOfBirth).toLocaleDateString()}
+                  </p>
+                </div>
+              ) : (
+                <PatientProfileForm initialProfile={initialProfile} />
+              )
             ) : (
               <p className="text-slate-700">
                 Patient intake form is only available for patient accounts.

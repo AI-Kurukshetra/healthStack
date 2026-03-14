@@ -64,3 +64,17 @@ Legend: `[ ]` todo, `[x]` done, `[~]` in-progress, `[!]` blocked
 - [x] [2026-03-14 16:10] Add patient prescription upload flow (secure file upload API, patient records UI, and schema/policy migration)
 - [x] [2026-03-14 16:08] Fix build stability: route-handler export separation for Next route typing and verify successful production build outside sandbox restrictions
 - [x] [2026-03-14 16:14] Fix missing tenant context for new users by auto-creating default organization memberships on auth signup and backfilling unassigned users
+- [x] [2026-03-14 16:19] Allow platform admin to upload prescriptions on behalf of patients from admin patient details
+- [x] [2026-03-14 16:22] Remove visible identifier strings from dashboard UI (patient/admin/provider/video pages)
+- [x] [2026-03-14 16:34] Route membership-missing providers to waiting page and restrict organization creation to owner/admin (plus platform admin)
+- [x] [2026-03-14 16:47] Enable super admin clinical note creation without requiring membership context fallback
+- [x] [2026-03-14 16:51] Keep admin clinical note section visible even when no eligible encounters exist (show disabled inputs + guidance)
+- [x] [2026-03-14 16:54] Update README with product name, purpose, and competitor-alternative positioning
+- [x] [2026-03-14 16:26] Enable admin clinical note entry on patient detail: allow admin note mutations and add admin patient-note entry form
+- [x] [2026-03-14 16:35] Restrict dashboard patient intake panel to incomplete profiles only; show profile-complete state for existing patients
+- [x] [2026-03-14 16:43] Fix onboarding post-create navigation by replacing client push/refresh with deterministic redirect to nextPath
+- [x] [2026-03-14 16:50] Assign one organization to all existing users and patients via Supabase admin script and execute against remote project
+- [x] [2026-03-14 17:00] Fix provider tenant-context mismatch for `seed-provider-1773481187245-chkzjn3d@example.com` by retaining only `bacancy-health-network` membership
+- [x] [2026-03-14 17:10] Fix provider onboarding/awaiting redirect bug by removing unconditional provider redirect from `/onboarding` before membership check
+- [x] [2026-03-14 17:16] Fix patient directory search query for UUID columns by replacing invalid `ilike` UUID filters with exact UUID match clauses
+- [x] [2026-03-14 16:48] Create API documentation for all App Router endpoints with request/response envelopes, auth/role rules, and error-code coverage

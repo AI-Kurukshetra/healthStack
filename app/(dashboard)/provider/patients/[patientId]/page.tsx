@@ -167,7 +167,6 @@ export default async function ProviderPatientHistoryPage({
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-slate-700">
           <p>DOB: {new Date(patient.dateOfBirth).toLocaleDateString()}</p>
-          <p>Patient ID: {patient.id}</p>
           <Link
             href="/provider/patients"
             className="inline-block text-cyan-900 underline underline-offset-4"

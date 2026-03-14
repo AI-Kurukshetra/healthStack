@@ -16,7 +16,7 @@ export default async function EncounterVideoPage({
   params,
   searchParams,
 }: EncounterVideoPageProps) {
-  const { encounterId } = await params;
+  await params;
   const { error: errorCode } = await searchParams;
 
   const supabase = await createClient();
@@ -61,8 +61,8 @@ export default async function EncounterVideoPage({
           <CardTitle className="text-cyan-950">Consultation Session</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-slate-700">
-          Encounter <span className="font-mono">{encounterId}</span> video room
-          initialized. Media integration can be plugged into this page boundary.
+          Secure video room initialized. Media integration can be plugged into this
+          page boundary.
         </CardContent>
       </Card>
 

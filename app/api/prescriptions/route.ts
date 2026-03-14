@@ -2,10 +2,11 @@ import { ApiError } from "@/lib/api/errors";
 import { createErrorResponse, createMutationResponse } from "@/lib/api/response";
 import { getRequestId } from "@/lib/api/request-id";
 import { getUserRole } from "@/lib/auth/roles";
-import { getPrimaryOrganizationIdForUser } from "@/lib/auth/tenant";
 import { insertAuditEvent } from "@/lib/audit/log";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { prescriptionRecordSchema } from "@/lib/validations/prescription.schema";
+import { z } from "zod";
 
 const PRESCRIPTIONS_BUCKET = "patient-prescriptions";
 const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
@@ -32,41 +33,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (getUserRole(user) !== "patient") {
+    const role = getUserRole(user);
+    if (role !== "patient" && role !== "admin") {
       return createErrorResponse(
         new ApiError({
           code: "PRESCRIPTION_UPLOAD_FORBIDDEN",
-          message: "Only patients can upload prescriptions.",
-          status: 403,
-        }),
-        requestId,
-      );
-    }
-
-    const organizationId = await getPrimaryOrganizationIdForUser(supabase, user.id);
-    if (!organizationId) {
-      return createErrorResponse(
-        new ApiError({
-          code: "ORG_CONTEXT_REQUIRED",
-          message: "No organization context found for current user.",
-          status: 403,
-        }),
-        requestId,
-      );
-    }
-
-    const { data: patient } = await supabase
-      .from("patients")
-      .select("id,organization_id")
-      .eq("user_id", user.id)
-      .eq("organization_id", organizationId)
-      .maybeSingle();
-
-    if (!patient) {
-      return createErrorResponse(
-        new ApiError({
-          code: "PATIENT_PROFILE_REQUIRED",
-          message: "Complete patient profile before uploading prescriptions.",
+          message: "Only patients and platform admins can upload prescriptions.",
           status: 403,
         }),
         requestId,
@@ -75,6 +47,8 @@ export async function POST(request: Request) {
 
     const formData = await request.formData();
     const fileEntry = formData.get("file");
+    const patientIdInput = formData.get("patientId");
+    const adminClient = createAdminClient();
 
     if (!(fileEntry instanceof File)) {
       return createErrorResponse(
@@ -109,10 +83,28 @@ export async function POST(request: Request) {
       );
     }
 
-    const sanitizedOriginalName = sanitizeFileName(fileEntry.name);
-    const filePath = `${user.id}/${Date.now()}-${crypto.randomUUID()}-${sanitizedOriginalName}`;
+    const targetPatient = await resolveTargetPatient({
+      adminClient,
+      actorId: user.id,
+      actorRole: role,
+      patientIdInput,
+    });
 
-    const { error: uploadError } = await supabase.storage
+    if (!targetPatient) {
+      return createErrorResponse(
+        new ApiError({
+          code: "PATIENT_PROFILE_REQUIRED",
+          message: "Target patient profile was not found.",
+          status: 404,
+        }),
+        requestId,
+      );
+    }
+
+    const sanitizedOriginalName = sanitizeFileName(fileEntry.name);
+    const filePath = `${targetPatient.userId}/${Date.now()}-${crypto.randomUUID()}-${sanitizedOriginalName}`;
+
+    const { error: uploadError } = await adminClient.storage
       .from(PRESCRIPTIONS_BUCKET)
       .upload(filePath, fileEntry, {
         upsert: false,
@@ -127,11 +119,11 @@ export async function POST(request: Request) {
       });
     }
 
-    const { data: insertedRow, error: insertError } = await supabase
+    const { data: insertedRow, error: insertError } = await adminClient
       .from("patient_prescriptions")
       .insert({
-        organization_id: patient.organization_id,
-        patient_id: patient.id,
+        organization_id: targetPatient.organizationId,
+        patient_id: targetPatient.id,
         uploaded_by: user.id,
         file_name: sanitizedOriginalName,
         file_path: filePath,
@@ -142,7 +134,7 @@ export async function POST(request: Request) {
       .single();
 
     if (insertError || !insertedRow) {
-      await supabase.storage.from(PRESCRIPTIONS_BUCKET).remove([filePath]);
+      await adminClient.storage.from(PRESCRIPTIONS_BUCKET).remove([filePath]);
       throw new ApiError({
         code: "PRESCRIPTION_METADATA_SAVE_FAILED",
         message: "Prescription was uploaded but metadata save failed.",
@@ -163,15 +155,16 @@ export async function POST(request: Request) {
     });
 
     await insertAuditEvent(supabase, {
-      organizationId: patient.organization_id,
+      organizationId: targetPatient.organizationId,
       eventType: "prescription.uploaded",
       action: "upload",
       resourceType: "patient_prescription",
       resourceId: parsed.id,
       actorId: user.id,
-      actorRole: "patient",
+      actorRole: role,
       requestId,
       metadata: {
+        targetPatientId: targetPatient.id,
         fileName: parsed.fileName,
         mimeType: parsed.mimeType,
         sizeBytes: parsed.sizeBytes,
@@ -192,6 +185,58 @@ export async function POST(request: Request) {
     return createErrorResponse(apiError, requestId);
   }
 }
+
+async function resolveTargetPatient({
+  adminClient,
+  actorId,
+  actorRole,
+  patientIdInput,
+}: {
+  adminClient: ReturnType<typeof createAdminClient>;
+  actorId: string;
+  actorRole: "patient" | "admin";
+  patientIdInput: FormDataEntryValue | null;
+}) {
+  if (actorRole === "patient") {
+    const { data } = await adminClient
+      .from("patients")
+      .select("id,user_id,organization_id")
+      .eq("user_id", actorId)
+      .maybeSingle();
+    if (!data) {
+      return null;
+    }
+    return { id: data.id, userId: data.user_id, organizationId: data.organization_id };
+  }
+
+  const patientIdParseResult =
+    typeof patientIdInput === "string" && patientIdInput.length > 0
+      ? patientIdSchema.safeParse(patientIdInput)
+      : null;
+
+  if (!patientIdParseResult || !patientIdParseResult.success) {
+    throw new ApiError({
+      code: "PATIENT_ID_REQUIRED",
+      message: "patientId is required when admin uploads a prescription.",
+      status: 400,
+    });
+  }
+  const patientId = patientIdParseResult.data;
+
+  const { data } = await adminClient
+    .from("patients")
+    .select("id,user_id,organization_id")
+    .eq("id", patientId)
+    .maybeSingle();
+
+  if (!data) {
+    return null;
+  }
+
+  return { id: data.id, userId: data.user_id, organizationId: data.organization_id };
+}
+
+const patientIdSchema = z.string().uuid();
 
 function sanitizeFileName(name: string): string {
   const trimmed = name.trim();

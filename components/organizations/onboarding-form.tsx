@@ -8,7 +8,6 @@ import {
   organizationOnboardingSchema,
   type OrganizationOnboardingInput,
 } from "@/lib/validations/organization.schema";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 
@@ -29,7 +28,6 @@ type MutationResult = {
 };
 
 export function OrganizationOnboardingForm() {
-  const router = useRouter();
   const [apiError, setApiError] = useState<string | null>(null);
 
   const form = useForm<OrganizationOnboardingInput>({
@@ -60,8 +58,8 @@ export function OrganizationOnboardingForm() {
       return;
     }
 
-    router.push(body.data?.nextPath ?? "/dashboard");
-    router.refresh();
+    const nextPath = body.data?.nextPath ?? "/dashboard";
+    window.location.assign(nextPath);
   });
 
   return (
