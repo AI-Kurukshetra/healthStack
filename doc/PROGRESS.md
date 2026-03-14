@@ -99,3 +99,4 @@
 [2026-03-14 17:10] codex — Fixed middleware flow that forced providers on `/onboarding` to `awaiting-organization` before membership evaluation; assigned providers now route to dashboard correctly.
 [2026-03-14 17:16] codex — Fixed admin patient directory search failure caused by UUID `ilike` filters; switched to name `ilike` + UUID exact-match clauses for patient/user IDs.
 [2026-03-14 16:48] codex — Added `doc/API.md` with complete API endpoint documentation (contracts, role/auth constraints, envelopes, and error codes) and linked it from `README.md`.
+[2026-03-14 16:57] codex — Implemented Swagger/OpenAPI docs: added spec builder (`lib/openapi/spec.ts`), public `/api/docs` endpoint, interactive `/docs` page (`swagger-ui-react`), middleware public-route allowances, and validated via `pnpm typecheck` + `pnpm lint`.

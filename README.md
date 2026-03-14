@@ -89,3 +89,5 @@ pnpm test
 
 See `doc/` for PRD, tasks, progress, decisions, changelog, and schema notes.
 - API reference: `doc/API.md`
+- Swagger UI: `/docs`
+- OpenAPI JSON: `/api/docs`

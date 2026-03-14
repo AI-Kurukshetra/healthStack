@@ -4,6 +4,10 @@ Last updated: 2026-03-14
 
 This document describes the current App Router API under `app/api/*`.
 
+## Interactive Docs
+- Swagger UI: `GET /docs`
+- Raw OpenAPI spec (JSON): `GET /api/docs`
+
 ## Base URL
 - Local: `http://localhost:3000`
 - Example: `GET http://localhost:3000/api/patients`

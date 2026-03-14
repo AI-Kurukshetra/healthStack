@@ -214,3 +214,9 @@
 - Fixed search in `app/(dashboard)/admin/patients/page.tsx`: removed invalid UUID `ilike` predicates (`id`, `user_id`) and replaced with UUID-aware exact-match filters (`id.eq`, `user_id.eq`) while preserving name/org token search.
 - Added API reference document `doc/API.md` covering all current `app/api/*` endpoints with request/response contracts, auth+role access rules, tenant-context notes, and mapped error-code inventory.
 - Updated `README.md` Project Docs section to link the new API reference (`doc/API.md`).
+- Added Swagger/OpenAPI runtime docs:
+- Added `lib/openapi/spec.ts` OpenAPI 3.0 spec builder covering all current App Router APIs.
+- Added `app/api/docs/route.ts` public JSON endpoint returning live OpenAPI spec.
+- Added `app/docs/page.tsx` + `components/docs/swagger-ui-view.tsx` interactive Swagger UI page.
+- Updated `app/layout.tsx` to include `swagger-ui-react` stylesheet and updated `lib/supabase/middleware.ts` public path handling for `/docs` and `/api/docs`.
+- Added Swagger dependencies in `package.json`/lockfile: `swagger-jsdoc`, `swagger-ui-react`, and typings.

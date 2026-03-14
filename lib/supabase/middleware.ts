@@ -5,6 +5,7 @@ import { getUserRole, isPlatformAdmin, type UserRole } from "@/lib/auth/roles";
 const publicPaths = new Set([
   "/",
   "/pricing",
+  "/docs",
   "/login",
   "/register",
   "/forgot-password",
@@ -31,6 +32,7 @@ export function shouldEnforceOrganizationOnboarding(role: UserRole): boolean {
 export function isPublicPath(pathname: string): boolean {
   return (
     publicPaths.has(pathname) ||
+    pathname.startsWith("/api/docs") ||
     pathname.startsWith("/auth/confirm") ||
     pathname.startsWith("/auth/error") ||
     pathname.startsWith("/api/auth")

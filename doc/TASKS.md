@@ -78,3 +78,4 @@ Legend: `[ ]` todo, `[x]` done, `[~]` in-progress, `[!]` blocked
 - [x] [2026-03-14 17:10] Fix provider onboarding/awaiting redirect bug by removing unconditional provider redirect from `/onboarding` before membership check
 - [x] [2026-03-14 17:16] Fix patient directory search query for UUID columns by replacing invalid `ilike` UUID filters with exact UUID match clauses
 - [x] [2026-03-14 16:48] Create API documentation for all App Router endpoints with request/response envelopes, auth/role rules, and error-code coverage
+- [x] [2026-03-14 16:57] Add Swagger/OpenAPI support with `/api/docs` JSON spec endpoint and `/docs` interactive UI page

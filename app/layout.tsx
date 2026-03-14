@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
+import "swagger-ui-react/swagger-ui.css";
 import "./globals.css";
 
 const defaultUrl = process.env.VERCEL_URL
