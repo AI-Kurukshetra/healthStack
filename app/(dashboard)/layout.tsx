@@ -41,7 +41,7 @@ export default async function DashboardLayout({
 
       <section className="relative mx-auto w-full max-w-7xl p-4 md:p-5">
         <div className="lg:pl-[276px]">
-          <aside className="hidden rounded-3xl border border-slate-900/10 bg-white/75 p-4 backdrop-blur-sm lg:fixed lg:top-5 lg:z-20 lg:flex lg:h-[calc(100svh-2.5rem)] lg:w-[260px] lg:flex-col">
+          <aside className="hidden rounded-3xl border border-slate-900/10 bg-white/75 p-4 backdrop-blur-sm lg:fixed lg:top-5 lg:z-20 lg:flex lg:h-[calc(100svh-2.5rem)] lg:w-[260px] lg:flex-col" style={{ left: "20%" }}>
             <div className="rounded-2xl border border-slate-900/10 bg-white px-3 py-3">
               <div className="space-y-1">
                 <Link
