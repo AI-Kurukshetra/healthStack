@@ -47,22 +47,26 @@ export function LoginForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+      <Card className="border-slate-900/10 bg-white/80 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Welcome Back</p>
+          <CardTitle className="text-2xl text-cyan-950">Sign in</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account
+            Enter your account credentials to continue to your dashboard.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-slate-700">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="name@clinic.com"
+                  className="border-slate-900/15 bg-white"
                   {...form.register("email")}
                 />
                 {form.formState.errors.email?.message ? (
@@ -73,15 +77,22 @@ export function LoginForm({
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-slate-700">
+                    Password
+                  </Label>
                   <Link
                     href="/forgot-password"
-                    className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                    className="ml-auto inline-block text-sm text-cyan-900 underline-offset-4 hover:underline"
                   >
                     Forgot your password?
                   </Link>
                 </div>
-                <Input id="password" type="password" {...form.register("password")} />
+                <Input
+                  id="password"
+                  type="password"
+                  className="border-slate-900/15 bg-white"
+                  {...form.register("password")}
+                />
                 {form.formState.errors.password?.message ? (
                   <p className="text-sm text-red-500">
                     {form.formState.errors.password.message}
@@ -91,7 +102,7 @@ export function LoginForm({
               {apiError ? <p className="text-sm text-red-500">{apiError}</p> : null}
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-cyan-900 text-white hover:bg-cyan-800"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting ? "Logging in..." : "Login"}
@@ -99,7 +110,10 @@ export function LoginForm({
             </div>
             <div className="mt-4 text-center text-sm">
               Don&apos;t have an account?{" "}
-              <Link href="/register" className="underline underline-offset-4">
+              <Link
+                href="/register"
+                className="font-medium text-cyan-900 underline underline-offset-4"
+              >
                 Sign up
               </Link>
             </div>

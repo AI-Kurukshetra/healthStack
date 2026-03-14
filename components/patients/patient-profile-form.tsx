@@ -50,8 +50,14 @@ export function PatientProfileForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid gap-2">
-        <Label htmlFor="first-name">First Name</Label>
-        <Input id="first-name" {...form.register("firstName")} />
+        <Label htmlFor="first-name" className="text-slate-700">
+          First Name
+        </Label>
+        <Input
+          id="first-name"
+          className="border-slate-900/15 bg-white"
+          {...form.register("firstName")}
+        />
         {form.formState.errors.firstName?.message ? (
           <p className="text-sm text-red-500">
             {form.formState.errors.firstName.message}
@@ -60,8 +66,14 @@ export function PatientProfileForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="last-name">Last Name</Label>
-        <Input id="last-name" {...form.register("lastName")} />
+        <Label htmlFor="last-name" className="text-slate-700">
+          Last Name
+        </Label>
+        <Input
+          id="last-name"
+          className="border-slate-900/15 bg-white"
+          {...form.register("lastName")}
+        />
         {form.formState.errors.lastName?.message ? (
           <p className="text-sm text-red-500">
             {form.formState.errors.lastName.message}
@@ -70,8 +82,15 @@ export function PatientProfileForm({
       </div>
 
       <div className="grid gap-2">
-        <Label htmlFor="date-of-birth">Date of Birth</Label>
-        <Input id="date-of-birth" type="date" {...form.register("dateOfBirth")} />
+        <Label htmlFor="date-of-birth" className="text-slate-700">
+          Date of Birth
+        </Label>
+        <Input
+          id="date-of-birth"
+          type="date"
+          className="border-slate-900/15 bg-white"
+          {...form.register("dateOfBirth")}
+        />
         {form.formState.errors.dateOfBirth?.message ? (
           <p className="text-sm text-red-500">
             {form.formState.errors.dateOfBirth.message}
@@ -84,7 +103,11 @@ export function PatientProfileForm({
         <p className="text-sm text-emerald-600">{successMessage}</p>
       ) : null}
 
-      <Button type="submit" disabled={form.formState.isSubmitting}>
+      <Button
+        type="submit"
+        className="bg-cyan-900 text-white hover:bg-cyan-800"
+        disabled={form.formState.isSubmitting}
+      >
         {form.formState.isSubmitting ? "Saving..." : "Save Profile"}
       </Button>
     </form>

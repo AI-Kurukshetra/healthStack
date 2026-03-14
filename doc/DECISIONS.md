@@ -71,3 +71,35 @@
 ## 2026-03-14 - CI Gate Structure for E4-S3
 - Decision: Gate every push/PR with `pnpm lint`, `pnpm typecheck`, and `pnpm test`, and expose E2E flow execution as a `workflow_dispatch` CI job that accepts auth secrets for authenticated journey validation.
 - Rationale: This keeps default CI fast/reliable while still enabling full critical-flow validation when environment prerequisites are available.
+
+## 2026-03-14 - Public Landing Experience at Root Route
+- Decision: Keep `/` as a server-rendered landing page for unauthenticated visitors and redirect authenticated users to `/dashboard`.
+- Rationale: This supports product marketing/discovery and onboarding entry points without weakening existing protected-route behavior for signed-in sessions.
+
+## 2026-03-14 - Seed Strategy with Faker + Service Role
+- Decision: Implement seeding as a Node script (`supabase/seed.mjs`) using `@faker-js/faker`, `supabase.auth.admin.createUser`, and service-role table inserts instead of SQL-only fixtures.
+- Rationale: The MVP schema references `auth.users` across multiple tables, so programmatic seeding keeps relational links valid while generating realistic, role-aware test data at adjustable volumes.
+
+## 2026-03-14 - UI Flow Consolidation for MVP Journeys
+- Decision: Keep `/` as the public entry point and explicitly connect landing -> auth -> dashboard -> patient/provider feature routes through persistent navigation links and journey cards.
+- Rationale: The MVP already has implemented core capabilities; reducing navigation ambiguity improves task completion speed and makes API-backed flows discoverable without adding new backend scope.
+
+## 2026-03-14 - Operational Page Consistency Pattern
+- Decision: Standardize patient and provider operational pages to start with compact workflow summary cards before detailed lists/actions.
+- Rationale: Leading with key counts/statuses improves scanability and aligns decision-making on high-frequency pages (`/patient/appointments`, `/provider`) without changing data contracts.
+
+## 2026-03-14 - Authenticated Visual System Alignment
+- Decision: Align all authenticated routes to the same aesthetic system as `/` (warm base background, cyan accents, soft glass cards, and consistent section hierarchy) rather than default shadcn monochrome styling.
+- Rationale: This removes abrupt visual context shifts between marketing and product surfaces, improving perceived quality and navigation confidence without altering feature behavior.
+
+## 2026-03-14 - ISO Datetime Offset Compatibility
+- Decision: Standardize API/domain timestamp validation on `z.string().datetime({ offset: true })` instead of strict `Z`-only datetime parsing.
+- Rationale: Supabase/Postgres `timestamptz` can be serialized with timezone offsets (for example `+00:00`), and strict `Z` parsing caused runtime validation failures in dashboard/API record mapping.
+
+## 2026-03-14 - Seeder Slot Uniqueness Guard
+- Decision: Enforce uniqueness in generated provider slots inside the seed script before insert.
+- Rationale: Randomized slot generation can collide on `(provider_id, starts_at, ends_at)` and fail the seed run against remote Supabase due to `uq_provider_availability_unique_slot`.
+
+## 2026-03-14 - Auth Surface Visual Parity
+- Decision: Keep login/register pages and form components on the same visual system as landing/dashboard (shared background treatment, card depth, input styling, and CTA color language).
+- Rationale: Auth is a high-frequency first impression; visual parity reduces perceived fragmentation between public and authenticated experiences.

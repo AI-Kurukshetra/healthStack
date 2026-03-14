@@ -15,8 +15,8 @@ export const clinicalNoteRecordSchema = z.object({
   noteType: clinicalNoteTypeSchema,
   content: z.string().min(1),
   version: z.number().int().min(1),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 
 export type ClinicalNoteDraftInput = z.infer<typeof clinicalNoteDraftSchema>;

@@ -13,11 +13,11 @@ export default async function PatientRecordsPage() {
 
   if (!authData.user) {
     return (
-      <Card>
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Access denied</CardTitle>
+          <CardTitle className="text-cyan-950">Access denied</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-slate-700">
           Sign in to view your records.
         </CardContent>
       </Card>
@@ -32,11 +32,11 @@ export default async function PatientRecordsPage() {
 
   if (!patient) {
     return (
-      <Card>
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Patient profile required</CardTitle>
+          <CardTitle className="text-cyan-950">Patient profile required</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-slate-700">
           Complete your intake profile to access record summaries.
         </CardContent>
       </Card>
@@ -69,34 +69,68 @@ export default async function PatientRecordsPage() {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Record Summaries</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {summaries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No clinical notes are available yet.
+    <div className="grid gap-4">
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Patient Workflow
           </p>
-        ) : (
-          <ul className="space-y-2">
-            {summaries.map((record) => (
-              <li key={record.id} className="rounded-md border p-3 text-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Encounter {record.encounterId}
-                </p>
-                <p className="font-medium capitalize text-foreground">
-                  {record.noteType} note (v{record.version})
-                </p>
-                <p className="text-muted-foreground">{record.summary}</p>
-                <p className="text-xs text-muted-foreground">
-                  Updated {new Date(record.updatedAt).toLocaleString()}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+          <CardTitle className="text-cyan-950">Record Summaries</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Total notes</p>
+            <p className="mt-1 text-2xl font-semibold text-cyan-950">{summaries.length}</p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Latest update</p>
+            <p className="mt-1 text-xs">
+              {summaries[0]
+                ? new Date(summaries[0].updatedAt).toLocaleString()
+                : "No notes yet"}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Status</p>
+            <p className="mt-1 text-xs">
+              {summaries.length > 0
+                ? "Summaries available for review."
+                : "Waiting for provider documentation."}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-cyan-950">Clinical History</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {summaries.length === 0 ? (
+            <p className="text-sm text-slate-700">No clinical notes are available yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {summaries.map((record) => (
+                <li
+                  key={record.id}
+                  className="rounded-xl border border-slate-900/10 bg-white p-3 text-sm"
+                >
+                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                    Encounter {record.encounterId}
+                  </p>
+                  <p className="font-medium capitalize text-slate-950">
+                    {record.noteType} note (v{record.version})
+                  </p>
+                  <p className="text-slate-700">{record.summary}</p>
+                  <p className="text-xs text-slate-500">
+                    Updated {new Date(record.updatedAt).toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -22,6 +22,21 @@ pnpm install
 pnpm dev
 ```
 
+## Seed Data (Faker)
+
+```bash
+pnpm seed
+```
+
+Optional env overrides:
+- `SEED_PROVIDER_COUNT`
+- `SEED_PATIENT_COUNT`
+- `SEED_SLOTS_PER_PROVIDER`
+- `SEED_APPOINTMENT_COUNT`
+- `SEED_ENCOUNTER_COUNT`
+- `SEED_NOTE_COUNT`
+- `SEED_AUDIT_LOG_COUNT`
+
 ## Quality Checks
 
 ```bash

@@ -6,10 +6,10 @@ export const encounterRecordSchema = z.object({
   patientId: z.string().uuid(),
   providerId: z.string().uuid(),
   status: z.enum(["active", "connected", "completed"]),
-  startedAt: z.string().datetime().nullable(),
-  patientJoinedAt: z.string().datetime().nullable(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
+  startedAt: z.string().datetime({ offset: true }).nullable(),
+  patientJoinedAt: z.string().datetime({ offset: true }).nullable(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
 });
 
 export const encounterMutationSchema = z.discriminatedUnion("action", [

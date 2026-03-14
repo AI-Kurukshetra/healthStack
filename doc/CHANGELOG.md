@@ -42,3 +42,25 @@
 - Added audit-aware unit assertions in `app/api/auth/route.test.ts`, `app/api/appointments/route.test.ts`, and `app/api/medical-records/route.test.ts`.
 - Implemented E4-S2 validation guardrails via `tests/integration/rls-policy-contract.test.ts` to enforce migration-level RLS/policy contracts across patients, appointments, encounters, clinical notes, and audit logs.
 - Implemented E4-S3 release quality gates: added `.github/workflows/ci.yml` for lint/typecheck/test plus on-demand E2E execution, and expanded Playwright critical-journey coverage in `tests/e2e/clinical-workflow.spec.ts`.
+- Replaced `app/page.tsx` redirect-only behavior with a modern Tailwind landing page experience for unauthenticated users, including custom Google typography (`Cormorant Garamond` + `Manrope`), gradient/decorative background layers, responsive hero/feature sections, and login/register CTAs while retaining signed-in redirect to `/dashboard`.
+- Added Faker-based seed workflow: `supabase/seed.mjs` uses `@faker-js/faker` + Supabase Admin API/service-role inserts to generate provider/patient users, patient profiles, availability slots, appointments, encounters, clinical notes, and audit logs.
+- Added `pnpm seed` script (`node --env-file=.env.local supabase/seed.mjs`) and README usage/configuration for seed volume env overrides.
+- Improved public and authenticated UI flow:
+- Reworked `app/page.tsx` landing page with a clearer four-step care-flow narrative, stronger patient/provider CTAs, and refreshed visual direction while preserving authenticated redirect to `/dashboard`.
+- Updated `app/(auth)/login/page.tsx` and `app/(auth)/register/page.tsx` to split-panel layouts with explicit “Back to landing page” navigation.
+- Enhanced `app/(dashboard)/layout.tsx` header navigation with direct links to appointments, records, provider queue (role-aware), and public landing.
+- Updated `app/(dashboard)/dashboard/page.tsx` with a role-aware “Care Workflow Hub” section linking core journeys (appointments, records, provider queue).
+- Polished authenticated workflow pages for consistency:
+- Updated `app/(dashboard)/patient/appointments/page.tsx` with an appointments overview section (available slots, upcoming visits, active consultations) and improved visual grouping for availability/upcoming/history lists.
+- Updated `app/(dashboard)/provider/page.tsx` with a provider workflow summary (upcoming count, active encounters, next actions) and clearer queue action hierarchy for session and note links.
+- Applied full authenticated UI consistency pass to match landing-page visual direction:
+- Restyled `app/(dashboard)/layout.tsx` with shared typography, gradient background treatment, glassy rounded nav shell, and updated link/spacing hierarchy.
+- Restyled `app/(dashboard)/dashboard/page.tsx`, `app/(dashboard)/patient/appointments/page.tsx`, and `app/(dashboard)/provider/page.tsx` with cohesive card surfaces (`border-slate-900/10`, `bg-white/75`), cyan headline accents, and improved scan hierarchy.
+- Upgraded `app/(dashboard)/patient/records/page.tsx` and `app/(dashboard)/provider/notes/[encounterId]/page.tsx` with summary panels + refined list/editor sections for consistency with other dashboard routes.
+- Restyled `app/(dashboard)/encounters/[encounterId]/video/page.tsx` state cards to align with the same visual system.
+- Polished form controls in `components/patients/patient-profile-form.tsx` and `components/provider/clinical-note-form.tsx` (input surfaces + branded primary action buttons).
+- Fixed runtime datetime validation compatibility across domain schemas by changing Zod datetime validators to accept timezone offsets (`.datetime({ offset: true })`) for Supabase `timestamptz` strings (`+00:00` and `Z`).
+- Fixed seeding reliability by ensuring per-provider slot uniqueness in `supabase/seed.mjs` (`buildSlotsForProvider`) to prevent `uq_provider_availability_unique_slot` violations during remote Supabase seeding.
+- Improved auth UI design consistency:
+- Updated `app/(auth)/login/page.tsx` and `app/(auth)/register/page.tsx` with the same warm radial background system used in landing/dashboard and preserved split-panel layout.
+- Redesigned `components/login-form.tsx` and `components/sign-up-form.tsx` with refined headers, improved copy, cohesive input surfaces, and cyan-branded primary CTAs.

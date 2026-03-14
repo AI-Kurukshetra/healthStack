@@ -3,8 +3,8 @@ import { z } from "zod";
 export const appointmentSchema = z.object({
   patientId: z.string().uuid(),
   providerId: z.string().uuid(),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime(),
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }),
 });
 
 export const availabilityQuerySchema = z.object({
@@ -15,8 +15,8 @@ export const availabilitySlotSchema = z
   .object({
     id: z.string().uuid(),
     providerId: z.string().uuid(),
-    startsAt: z.string().datetime(),
-    endsAt: z.string().datetime(),
+    startsAt: z.string().datetime({ offset: true }),
+    endsAt: z.string().datetime({ offset: true }),
     isAvailable: z.literal(true),
   })
   .refine((value) => Date.parse(value.startsAt) < Date.parse(value.endsAt), {
@@ -28,8 +28,8 @@ export const appointmentRecordSchema = z.object({
   patientId: z.string().uuid(),
   providerId: z.string().uuid(),
   slotId: z.string().uuid(),
-  startsAt: z.string().datetime(),
-  endsAt: z.string().datetime(),
+  startsAt: z.string().datetime({ offset: true }),
+  endsAt: z.string().datetime({ offset: true }),
   status: z.enum(["confirmed", "cancelled"]),
 });
 

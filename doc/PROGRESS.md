@@ -43,3 +43,11 @@
     + .github/workflows/ci.yml
   Checks passed: pnpm lint ✓  pnpm typecheck ✓  pnpm test ✓
   Next handoff to: $agent-browser — execute full E2E suite (auth + scheduling + encounter + portal) in provisioned environment
+[2026-03-14 13:21] codex — Replaced root redirect-only homepage with a modern Tailwind landing page for logged-out users (custom typography, hero, feature cards, CTA), while preserving authenticated redirect to `/dashboard`; `pnpm lint` and `pnpm typecheck` pass.
+[2026-03-14 13:19] $bmad-dev — Added Faker.js seeder at `supabase/seed.mjs`, wired `pnpm seed`, and documented configurable seed counts in README.
+[2026-03-14 13:28] codex — Improved UI flow by upgrading `app/page.tsx` landing experience and adding clearer route navigation in auth and dashboard shells; `pnpm lint` and `pnpm typecheck` pass.
+[2026-03-14 13:31] codex — Polished patient/provider operational pages with workflow summary cards and clearer action grouping in `/patient/appointments` and `/provider`; `pnpm lint` and `pnpm typecheck` pass.
+[2026-03-14 13:35] codex — Unified dashboard visuals with landing-page styling across shell and core routes (`/dashboard`, `/patient/appointments`, `/patient/records`, `/provider`, `/provider/notes/[encounterId]`, `/encounters/[encounterId]/video`) and polished intake/note forms; `pnpm lint` and `pnpm typecheck` pass.
+[2026-03-14 13:32] codex — Fixed runtime `Invalid ISO datetime` failures by updating validation schemas to accept timezone-offset ISO strings (`+00:00`) returned by Supabase; verified with `pnpm typecheck` and `pnpm test`.
+[2026-03-14 13:35] codex — Seeded remote Supabase via `pnpm seed`, fixed seed slot-collision bug in `supabase/seed.mjs`, and verified live row counts + sample records from patients/appointments tables.
+[2026-03-14 13:37] codex — Redesigned login/register UI with upgraded auth page backgrounds and polished `LoginForm`/`SignUpForm` card, input, and CTA styling to match product visual system; `pnpm lint` and `pnpm typecheck` pass.

@@ -20,11 +20,11 @@ export default async function ProviderClinicalNotePage({
 
   if (!authData.user || getUserRole(authData.user) !== "provider") {
     return (
-      <Card>
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Access denied</CardTitle>
+          <CardTitle className="text-cyan-950">Access denied</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-slate-700">
           Provider role required to manage clinical notes.
         </CardContent>
       </Card>
@@ -40,11 +40,11 @@ export default async function ProviderClinicalNotePage({
 
   if (!encounter) {
     return (
-      <Card>
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Encounter unavailable</CardTitle>
+          <CardTitle className="text-cyan-950">Encounter unavailable</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-slate-700">
           This encounter was not found or is not assigned to your account.
         </CardContent>
       </Card>
@@ -75,39 +75,56 @@ export default async function ProviderClinicalNotePage({
         });
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Clinical Note</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">
-          Encounter: {encounterId}
-        </p>
-        {note ? (
-          <p className="text-xs text-muted-foreground">
-            Latest version: v{note.version} (updated{" "}
-            {new Date(note.updatedAt).toLocaleString()})
+    <div className="grid gap-4">
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Provider Workflow
           </p>
-        ) : (
-          <p className="text-xs text-muted-foreground">
-            No note saved yet for this encounter.
-          </p>
-        )}
+          <CardTitle className="text-cyan-950">Clinical Note</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Encounter</p>
+            <p className="mt-1 font-mono text-xs text-slate-900">{encounterId}</p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Version</p>
+            <p className="mt-1 text-2xl font-semibold text-cyan-950">
+              v{note?.version ?? 0}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">Last update</p>
+            <p className="mt-1 text-xs">
+              {note
+                ? new Date(note.updatedAt).toLocaleString()
+                : "No note saved yet for this encounter."}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
-        <ClinicalNoteForm
-          encounterId={encounterId}
-          initialNote={
-            note
-              ? {
-                  id: note.id,
-                  noteType: note.noteType,
-                  content: note.content,
-                  version: note.version,
-                }
-              : null
-          }
-        />
-      </CardContent>
-    </Card>
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-cyan-950">Documentation Editor</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ClinicalNoteForm
+            encounterId={encounterId}
+            initialNote={
+              note
+                ? {
+                    id: note.id,
+                    noteType: note.noteType,
+                    content: note.content,
+                    version: note.version,
+                  }
+                : null
+            }
+          />
+        </CardContent>
+      </Card>
+    </div>
   );
 }

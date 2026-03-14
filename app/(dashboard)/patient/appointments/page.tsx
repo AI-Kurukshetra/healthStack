@@ -102,143 +102,191 @@ export default async function PatientAppointmentsPage() {
       appointment.status === "cancelled" ||
       Date.parse(appointment.endsAt) < Date.now(),
   );
+  const activeEncounterCount = upcomingAppointments.filter((appointment) => {
+    const encounter = encounterByAppointmentId.get(appointment.id);
+    return encounter?.status === "active" || encounter?.status === "connected";
+  }).length;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      <Card>
-        <CardHeader>
-          <CardTitle>Appointment Availability</CardTitle>
+    <div className="grid gap-4">
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Patient Workflow
+          </p>
+          <CardTitle className="text-cyan-950">Appointments Overview</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {slots.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No appointment slots are currently available. Please check back
-              soon or contact support for scheduling guidance.
+        <CardContent className="grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Available slots
             </p>
-          ) : (
-            <ul className="space-y-2">
-              {slots.map((slot) => (
-                <li key={slot.id} className="rounded-md border p-3 text-sm">
-                  <p className="font-medium">Provider: {slot.providerId}</p>
-                  <p className="text-muted-foreground">
-                    {new Date(slot.startsAt).toLocaleString()} -{" "}
-                    {new Date(slot.endsAt).toLocaleString()}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+            <p className="mt-1 text-2xl font-semibold text-cyan-950">{slots.length}</p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Upcoming visits
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-cyan-950">
+              {upcomingAppointments.length}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Active consultations
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-cyan-950">
+              {activeEncounterCount}
+            </p>
+          </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Upcoming Appointments</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {upcomingAppointments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              You do not have upcoming appointments.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {upcomingAppointments.map((appointment) => (
-                <li key={appointment.id} className="rounded-md border p-3 text-sm">
-                  {(() => {
-                    const encounter = encounterByAppointmentId.get(appointment.id);
-                    if (!encounter) {
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-cyan-950">Appointment Availability</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {slots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No appointment slots are currently available. Please check back
+                soon or contact support for scheduling guidance.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {slots.map((slot) => (
+                  <li
+                    key={slot.id}
+                    className="rounded-xl border border-slate-900/10 bg-white p-3 text-sm"
+                  >
+                    <p className="font-medium">Provider: {slot.providerId}</p>
+                    <p className="text-muted-foreground">
+                      {new Date(slot.startsAt).toLocaleString()} -{" "}
+                      {new Date(slot.endsAt).toLocaleString()}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-cyan-950">Upcoming Appointments</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {upcomingAppointments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                You do not have upcoming appointments.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {upcomingAppointments.map((appointment) => (
+                  <li
+                    key={appointment.id}
+                    className="rounded-xl border border-slate-900/10 bg-white p-3 text-sm"
+                  >
+                    {(() => {
+                      const encounter = encounterByAppointmentId.get(appointment.id);
+                      if (!encounter) {
+                        return (
+                          <p className="text-xs uppercase tracking-wide text-amber-600">
+                            Encounter: not started
+                          </p>
+                        );
+                      }
+
                       return (
-                        <p className="text-xs uppercase tracking-wide text-amber-600">
-                          Encounter: not started
+                        <p className="text-xs uppercase tracking-wide text-emerald-700">
+                          Encounter: {encounter.status}
                         </p>
                       );
-                    }
+                    })()}
+                    <p className="font-medium">Provider: {appointment.providerId}</p>
+                    <p className="text-muted-foreground">
+                      {new Date(appointment.startsAt).toLocaleString()} -{" "}
+                      {new Date(appointment.endsAt).toLocaleString()}
+                    </p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Status: {appointment.status}
+                    </p>
+                    {(() => {
+                      const encounter = encounterByAppointmentId.get(appointment.id);
+                      if (
+                        !encounter ||
+                        (encounter.status !== "active" &&
+                          encounter.status !== "connected")
+                      ) {
+                        return null;
+                      }
 
-                    return (
-                      <p className="text-xs uppercase tracking-wide text-emerald-700">
-                        Encounter: {encounter.status}
-                      </p>
-                    );
-                  })()}
-                  <p className="font-medium">Provider: {appointment.providerId}</p>
-                  <p className="text-muted-foreground">
-                    {new Date(appointment.startsAt).toLocaleString()} -{" "}
-                    {new Date(appointment.endsAt).toLocaleString()}
-                  </p>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Status: {appointment.status}
-                  </p>
-                  {(() => {
-                    const encounter = encounterByAppointmentId.get(appointment.id);
-                    if (
-                      !encounter ||
-                      (encounter.status !== "active" &&
-                        encounter.status !== "connected")
-                    ) {
-                      return null;
-                    }
+                      return (
+                        <Link
+                          className="mt-2 inline-block text-xs text-cyan-900 underline underline-offset-4"
+                          href={`/encounters/${encounter.id}/video`}
+                        >
+                          Join consultation
+                        </Link>
+                      );
+                    })()}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
 
-                    return (
-                      <Link
-                        className="mt-2 inline-block text-xs text-primary underline underline-offset-4"
-                        href={`/encounters/${encounter.id}/video`}
-                      >
-                        Join consultation
-                      </Link>
-                    );
-                  })()}
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+        <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+          <CardHeader>
+            <CardTitle className="text-cyan-950">Appointment History</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Link
+              className="inline-block text-xs text-cyan-900 underline underline-offset-4"
+              href="/patient/records"
+            >
+              View record summaries
+            </Link>
+            {historyAppointments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No past or cancelled appointments yet.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {historyAppointments.map((appointment) => (
+                  <li
+                    key={appointment.id}
+                    className="rounded-xl border border-slate-900/10 bg-white p-3 text-sm"
+                  >
+                    {(() => {
+                      const encounter = encounterByAppointmentId.get(appointment.id);
+                      if (!encounter) {
+                        return null;
+                      }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Appointment History</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Link
-            className="inline-block text-xs text-primary underline underline-offset-4"
-            href="/patient/records"
-          >
-            View record summaries
-          </Link>
-          {historyAppointments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No past or cancelled appointments yet.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {historyAppointments.map((appointment) => (
-                <li key={appointment.id} className="rounded-md border p-3 text-sm">
-                  {(() => {
-                    const encounter = encounterByAppointmentId.get(appointment.id);
-                    if (!encounter) {
-                      return null;
-                    }
-
-                    return (
-                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                        Encounter: {encounter.status}
-                      </p>
-                    );
-                  })()}
-                  <p className="font-medium">Provider: {appointment.providerId}</p>
-                  <p className="text-muted-foreground">
-                    {new Date(appointment.startsAt).toLocaleString()} -{" "}
-                    {new Date(appointment.endsAt).toLocaleString()}
-                  </p>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                    Status: {appointment.status}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+                      return (
+                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                          Encounter: {encounter.status}
+                        </p>
+                      );
+                    })()}
+                    <p className="font-medium">Provider: {appointment.providerId}</p>
+                    <p className="text-muted-foreground">
+                      {new Date(appointment.startsAt).toLocaleString()} -{" "}
+                      {new Date(appointment.endsAt).toLocaleString()}
+                    </p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                      Status: {appointment.status}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

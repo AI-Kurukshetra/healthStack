@@ -35,8 +35,8 @@ export const authMutationSchema = z.discriminatedUnion("action", [
 export const authUserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email().nullable(),
-  emailConfirmedAt: z.string().datetime().nullable(),
-  lastSignInAt: z.string().datetime().nullable(),
+  emailConfirmedAt: z.string().datetime({ offset: true }).nullable(),
+  lastSignInAt: z.string().datetime({ offset: true }).nullable(),
 });
 
 export const authSessionStateSchema = z.object({

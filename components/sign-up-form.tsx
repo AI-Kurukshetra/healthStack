@@ -64,20 +64,28 @@ export function SignUpForm({
 
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Sign up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+      <Card className="border-slate-900/10 bg-white/80 shadow-[0_24px_80px_-48px_rgba(15,23,42,0.45)] backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Create Account
+          </p>
+          <CardTitle className="text-2xl text-cyan-950">Sign up</CardTitle>
+          <CardDescription>
+            Start your virtual care workflow in a few steps.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSignUp}>
             <div className="flex flex-col gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-slate-700">
+                  Email
+                </Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@example.com"
+                  placeholder="name@clinic.com"
+                  className="border-slate-900/15 bg-white"
                   {...form.register("email")}
                 />
                 {form.formState.errors.email?.message ? (
@@ -88,9 +96,16 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password" className="text-slate-700">
+                    Password
+                  </Label>
                 </div>
-                <Input id="password" type="password" {...form.register("password")} />
+                <Input
+                  id="password"
+                  type="password"
+                  className="border-slate-900/15 bg-white"
+                  {...form.register("password")}
+                />
                 {form.formState.errors.password?.message ? (
                   <p className="text-sm text-red-500">
                     {form.formState.errors.password.message}
@@ -99,11 +114,14 @@ export function SignUpForm({
               </div>
               <div className="grid gap-2">
                 <div className="flex items-center">
-                  <Label htmlFor="repeat-password">Repeat Password</Label>
+                  <Label htmlFor="repeat-password" className="text-slate-700">
+                    Repeat Password
+                  </Label>
                 </div>
                 <Input
                   id="repeat-password"
                   type="password"
+                  className="border-slate-900/15 bg-white"
                   {...form.register("repeatPassword")}
                 />
                 {form.formState.errors.repeatPassword?.message ? (
@@ -115,7 +133,7 @@ export function SignUpForm({
               {apiError ? <p className="text-sm text-red-500">{apiError}</p> : null}
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full bg-cyan-900 text-white hover:bg-cyan-800"
                 disabled={form.formState.isSubmitting}
               >
                 {form.formState.isSubmitting ? "Creating an account..." : "Sign up"}
@@ -123,7 +141,10 @@ export function SignUpForm({
             </div>
             <div className="mt-4 text-center text-sm">
               Already have an account?{" "}
-              <Link href="/login" className="underline underline-offset-4">
+              <Link
+                href="/login"
+                className="font-medium text-cyan-900 underline underline-offset-4"
+              >
                 Login
               </Link>
             </div>

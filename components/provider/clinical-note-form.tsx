@@ -90,10 +90,13 @@ export function ClinicalNoteForm({
   return (
     <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
       <div className="space-y-2">
-        <Label htmlFor="noteType">Note type</Label>
+        <Label htmlFor="noteType" className="text-slate-700">
+          Note type
+        </Label>
         <Input
           id="noteType"
           list="clinical-note-types"
+          className="border-slate-900/15 bg-white"
           {...form.register("noteType")}
         />
         <datalist id="clinical-note-types">
@@ -108,10 +111,12 @@ export function ClinicalNoteForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="content">Clinical note</Label>
+        <Label htmlFor="content" className="text-slate-700">
+          Clinical note
+        </Label>
         <textarea
           id="content"
-          className="min-h-40 w-full rounded-md border bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="min-h-40 w-full rounded-md border border-slate-900/15 bg-white px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           {...form.register("content")}
         />
         {form.formState.errors.content ? (
@@ -124,7 +129,11 @@ export function ClinicalNoteForm({
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
 
-      <Button type="submit" disabled={form.formState.isSubmitting}>
+      <Button
+        type="submit"
+        className="bg-cyan-900 text-white hover:bg-cyan-800"
+        disabled={form.formState.isSubmitting}
+      >
         {form.formState.isSubmitting
           ? "Saving..."
           : initialNote

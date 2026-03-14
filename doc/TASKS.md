@@ -22,3 +22,11 @@ Legend: `[ ]` todo, `[x]` done, `[~]` in-progress, `[!]` blocked
 - [x] [2026-03-14 12:46] Implement `E4-S1 Audit Logging for Sensitive Actions`: `audit_logs` table + RLS and best-effort event writes for auth, appointment, and medical-record mutations
 - [x] [2026-03-14 12:46] Implement `E4-S2 RLS and Policy Validation`: integration contract tests asserting policy/RLS expectations for protected tables and migration coverage
 - [x] [2026-03-14 12:46] Implement `E4-S3 Quality Gates and Critical Tests`: CI workflow for lint/typecheck/test and expanded critical Playwright flow coverage for auth/scheduling/encounter/portal routes
+- [x] [2026-03-14 13:21] Build a modern Tailwind landing page at `/` for logged-out users while preserving authenticated redirect to `/dashboard`
+- [x] [2026-03-14 13:19] Add Faker.js seeder script for Supabase data population across auth, patient, scheduling, encounter, clinical-note, and audit-log models
+- [x] [2026-03-14 13:28] Improve UI flow across landing/auth/dashboard pages with clearer patient/provider navigation and an upgraded public landing experience
+- [x] [2026-03-14 13:31] Polish patient/provider operational pages (`/patient/appointments`, `/provider`) with consistent workflow summary cards and clearer action hierarchy
+- [x] [2026-03-14 13:35] Redesign authenticated shell and core dashboard routes to match landing-page visual language (palette, card styling, hierarchy, and form polish)
+- [x] [2026-03-14 13:32] Fix runtime Zod datetime parsing on dashboard/API validators by accepting timezone-offset ISO timestamps from Supabase
+- [x] [2026-03-14 13:35] Seed remote Supabase data and verify seeded records via direct Supabase table queries
+- [x] [2026-03-14 13:37] Improve auth UX polish by redesigning login/register pages and shared form components to match landing/dashboard visual system

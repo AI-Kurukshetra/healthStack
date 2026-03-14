@@ -18,11 +18,11 @@ export default async function ProviderDashboardPage() {
 
   if (role !== "provider") {
     return (
-      <Card>
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
         <CardHeader>
-          <CardTitle>Access denied</CardTitle>
+          <CardTitle className="text-cyan-950">Access denied</CardTitle>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
+        <CardContent className="text-sm text-slate-700">
           Provider role required to access this dashboard.
         </CardContent>
       </Card>
@@ -71,77 +71,120 @@ export default async function ProviderDashboardPage() {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Provider Dashboard Queue</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm text-muted-foreground">
-        {appointments.length === 0 ? (
-          <p>No upcoming appointments in your queue.</p>
-        ) : (
-          <ul className="space-y-2">
-            {appointments.map((appointment) => (
-              <li key={appointment.id} className="rounded-md border p-3">
-                {(() => {
+    <div className="grid gap-4">
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader className="space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Provider Workflow
+          </p>
+          <CardTitle className="text-cyan-950">Today&apos;s Care Queue</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 text-sm text-slate-700 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Upcoming appointments
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-cyan-950">
+              {appointments.length}
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Active encounters
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-cyan-950">
+              {
+                appointments.filter((appointment) => {
                   const encounter = encountersByAppointmentId.get(appointment.id);
-                  if (!encounter) {
+                  return (
+                    encounter?.status === "active" ||
+                    encounter?.status === "connected"
+                  );
+                }).length
+              }
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-900/10 bg-white p-3">
+            <p className="text-xs uppercase tracking-wide text-slate-500">
+              Next actions
+            </p>
+            <p className="mt-1 text-xs">
+              Launch session links and keep SOAP/progress notes current.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-slate-900/10 bg-white/75 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="text-cyan-950">Upcoming Appointments</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm text-slate-700">
+          {appointments.length === 0 ? (
+            <p>No upcoming appointments in your queue.</p>
+          ) : (
+            <ul className="space-y-2">
+              {appointments.map((appointment) => (
+                <li key={appointment.id} className="rounded-xl border border-slate-900/10 bg-white p-3">
+                  {(() => {
+                    const encounter = encountersByAppointmentId.get(appointment.id);
+                    if (!encounter) {
+                      return (
+                        <p className="text-xs uppercase tracking-wide text-amber-600">
+                          Encounter: not started
+                        </p>
+                      );
+                    }
+
                     return (
-                      <p className="text-xs uppercase tracking-wide text-amber-600">
-                        Encounter: not started
+                      <p className="text-xs uppercase tracking-wide text-emerald-700">
+                        Encounter: {encounter.status}
                       </p>
                     );
-                  }
+                  })()}
+                  <p className="mt-1 font-medium text-slate-950">
+                    Patient: {appointment.patientId}
+                  </p>
+                  <p>
+                    {new Date(appointment.startsAt).toLocaleString()} -{" "}
+                    {new Date(appointment.endsAt).toLocaleString()}
+                  </p>
+                  <p className="text-xs uppercase tracking-wide">
+                    Status:{" "}
+                    {appointment.status === "confirmed" ? "Confirmed" : "Cancelled"}
+                  </p>
+                  {(() => {
+                    const encounter = encountersByAppointmentId.get(appointment.id);
+                    if (!encounter) {
+                      return null;
+                    }
 
-                  return (
-                    <p className="text-xs uppercase tracking-wide text-emerald-700">
-                      Encounter: {encounter.status}
-                    </p>
-                  );
-                })()}
-                <p className="font-medium text-foreground">
-                  Patient: {appointment.patientId}
-                </p>
-                <p>
-                  {new Date(appointment.startsAt).toLocaleString()} -{" "}
-                  {new Date(appointment.endsAt).toLocaleString()}
-                </p>
-                <p className="text-xs uppercase tracking-wide">
-                  Status:{" "}
-                  {appointment.status === "confirmed"
-                    ? "Confirmed"
-                    : "Cancelled"}
-                </p>
-                {(() => {
-                  const encounter = encountersByAppointmentId.get(appointment.id);
-                  if (!encounter) {
-                    return null;
-                  }
-
-                  return (
-                    <div className="mt-2 flex flex-wrap gap-3">
-                      {(encounter.status === "active" ||
-                        encounter.status === "connected") && (
+                    return (
+                      <div className="mt-2 flex flex-wrap gap-3">
+                        {(encounter.status === "active" ||
+                          encounter.status === "connected") && (
+                          <Link
+                            className="inline-block text-xs text-cyan-900 underline underline-offset-4"
+                            href={`/encounters/${encounter.id}/video`}
+                          >
+                            Open session link
+                          </Link>
+                        )}
                         <Link
-                          className="inline-block text-xs text-primary underline underline-offset-4"
-                          href={`/encounters/${encounter.id}/video`}
+                          className="inline-block text-xs text-cyan-900 underline underline-offset-4"
+                          href={`/provider/notes/${encounter.id}`}
                         >
-                          Open session link
+                          Open clinical note
                         </Link>
-                      )}
-                      <Link
-                        className="inline-block text-xs text-primary underline underline-offset-4"
-                        href={`/provider/notes/${encounter.id}`}
-                      >
-                        Open clinical note
-                      </Link>
-                    </div>
-                  );
-                })()}
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+                      </div>
+                    );
+                  })()}
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
