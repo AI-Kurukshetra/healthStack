@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleAuthGet, handleAuthPost } from "@/app/api/auth/route";
+import { handleAuthGet, handleAuthPost } from "@/app/api/auth/handlers";
 
 type FakeUser = {
   id: string;
@@ -49,6 +49,9 @@ function createFakeAuthClient(overrides?: Partial<RouteAuth>): RouteClient {
 
   return {
     auth,
+    from: () => ({
+      insert: async () => ({ error: null }),
+    }),
   };
 }
 
@@ -91,8 +94,20 @@ describe("app/api/auth/route", () => {
   });
 
   it("signs in and returns authenticated session data", async () => {
+    const auditEvents: Array<{ eventType: string; action: string }> = [];
     const response = await handleAuthPost(
-      createFakeAuthClient(),
+      {
+        ...createFakeAuthClient(),
+        from: () => ({
+          insert: async (value) => {
+            auditEvents.push({
+              eventType: value.event_type,
+              action: value.action,
+            });
+            return { error: null };
+          },
+        }),
+      },
       "req-sign-in",
       new URL("http://localhost:3000/api/auth"),
       {
@@ -118,6 +133,9 @@ describe("app/api/auth/route", () => {
       message: "Signed in.",
       requestId: "req-sign-in",
     });
+    expect(auditEvents).toEqual([
+      { eventType: "auth.sign_in", action: "sign-in" },
+    ]);
   });
 
   it("returns confirmation-needed sign-up state when session is null", async () => {

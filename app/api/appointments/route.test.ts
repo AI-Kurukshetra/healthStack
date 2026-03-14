@@ -9,6 +9,7 @@ type Repo = Parameters<typeof handleAppointmentsGet>[0];
 function createRepo(overrides?: Partial<Repo>): Repo {
   return {
     getAuthUser: async () => null,
+    logAuditEvent: async () => undefined,
     getPatientIdByUserId: async () => null,
     getSlotById: async () => null,
     setSlotAvailability: async () => undefined,
@@ -39,8 +40,12 @@ function createRepo(overrides?: Partial<Repo>): Repo {
 
 describe("appointments route", () => {
   it("creates booking when slot is available", async () => {
+    const auditEvents: Array<{ eventType: string; action: string }> = [];
     const response = await handleAppointmentsMutation(
       createRepo({
+        logAuditEvent: async (event) => {
+          auditEvents.push({ eventType: event.eventType, action: event.action });
+        },
         getAuthUser: async () => ({
           id: "7f961b6b-b271-4c7c-86f9-29f0f4572f4d",
           user_metadata: { role: "patient" },
@@ -63,6 +68,9 @@ describe("appointments route", () => {
     expect(response.status).toBe(200);
     expect(body.message).toBe("Appointment booked.");
     expect(body.data.status).toBe("confirmed");
+    expect(auditEvents).toEqual([
+      { eventType: "appointments.booked", action: "book" },
+    ]);
   });
 
   it("reschedules existing appointment", async () => {

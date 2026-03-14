@@ -4,7 +4,9 @@ import {
   appointmentRecordSchema,
   availabilitySlotSchema,
 } from "@/lib/validations/appointment.schema";
+import { encounterRecordSchema } from "@/lib/validations/encounter.schema";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Patient Appointments | Health Stack",
@@ -34,6 +36,10 @@ export default async function PatientAppointmentsPage() {
   let appointments: Array<
     ReturnType<typeof appointmentRecordSchema.parse>
   > = [];
+  let encounterByAppointmentId = new Map<
+    string,
+    ReturnType<typeof encounterRecordSchema.parse>
+  >();
 
   if (authData.user) {
     const { data: patient } = await supabase
@@ -59,6 +65,29 @@ export default async function PatientAppointmentsPage() {
           endsAt: row.ends_at,
           status: row.status,
         }),
+      );
+
+      const { data: encounterRows } = await supabase
+        .from("encounters")
+        .select(
+          "id,appointment_id,patient_id,provider_id,status,started_at,patient_joined_at,created_at,updated_at",
+        )
+        .eq("patient_id", patient.id);
+      const mapped = (encounterRows ?? []).map((row) =>
+        encounterRecordSchema.parse({
+          id: row.id,
+          appointmentId: row.appointment_id,
+          patientId: row.patient_id,
+          providerId: row.provider_id,
+          status: row.status,
+          startedAt: row.started_at,
+          patientJoinedAt: row.patient_joined_at,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+        }),
+      );
+      encounterByAppointmentId = new Map(
+        mapped.map((encounter) => [encounter.appointmentId, encounter]),
       );
     }
   }
@@ -115,6 +144,22 @@ export default async function PatientAppointmentsPage() {
             <ul className="space-y-2">
               {upcomingAppointments.map((appointment) => (
                 <li key={appointment.id} className="rounded-md border p-3 text-sm">
+                  {(() => {
+                    const encounter = encounterByAppointmentId.get(appointment.id);
+                    if (!encounter) {
+                      return (
+                        <p className="text-xs uppercase tracking-wide text-amber-600">
+                          Encounter: not started
+                        </p>
+                      );
+                    }
+
+                    return (
+                      <p className="text-xs uppercase tracking-wide text-emerald-700">
+                        Encounter: {encounter.status}
+                      </p>
+                    );
+                  })()}
                   <p className="font-medium">Provider: {appointment.providerId}</p>
                   <p className="text-muted-foreground">
                     {new Date(appointment.startsAt).toLocaleString()} -{" "}
@@ -123,6 +168,25 @@ export default async function PatientAppointmentsPage() {
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     Status: {appointment.status}
                   </p>
+                  {(() => {
+                    const encounter = encounterByAppointmentId.get(appointment.id);
+                    if (
+                      !encounter ||
+                      (encounter.status !== "active" &&
+                        encounter.status !== "connected")
+                    ) {
+                      return null;
+                    }
+
+                    return (
+                      <Link
+                        className="mt-2 inline-block text-xs text-primary underline underline-offset-4"
+                        href={`/encounters/${encounter.id}/video`}
+                      >
+                        Join consultation
+                      </Link>
+                    );
+                  })()}
                 </li>
               ))}
             </ul>
@@ -135,6 +199,12 @@ export default async function PatientAppointmentsPage() {
           <CardTitle>Appointment History</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <Link
+            className="inline-block text-xs text-primary underline underline-offset-4"
+            href="/patient/records"
+          >
+            View record summaries
+          </Link>
           {historyAppointments.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No past or cancelled appointments yet.
@@ -143,6 +213,18 @@ export default async function PatientAppointmentsPage() {
             <ul className="space-y-2">
               {historyAppointments.map((appointment) => (
                 <li key={appointment.id} className="rounded-md border p-3 text-sm">
+                  {(() => {
+                    const encounter = encounterByAppointmentId.get(appointment.id);
+                    if (!encounter) {
+                      return null;
+                    }
+
+                    return (
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Encounter: {encounter.status}
+                      </p>
+                    );
+                  })()}
                   <p className="font-medium">Provider: {appointment.providerId}</p>
                   <p className="text-muted-foreground">
                     {new Date(appointment.startsAt).toLocaleString()} -{" "}

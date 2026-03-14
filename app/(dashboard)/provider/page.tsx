@@ -2,7 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getUserRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 import { appointmentRecordSchema } from "@/lib/validations/appointment.schema";
+import { encounterRecordSchema } from "@/lib/validations/encounter.schema";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Provider Dashboard | Health Stack",
@@ -45,6 +47,28 @@ export default async function ProviderDashboardPage() {
       status: row.status,
     }),
   );
+  const { data: encounterRows } = await supabase
+    .from("encounters")
+    .select(
+      "id,appointment_id,patient_id,provider_id,status,started_at,patient_joined_at,created_at,updated_at",
+    )
+    .eq("provider_id", data.user!.id);
+  const encountersByAppointmentId = new Map(
+    (encounterRows ?? []).map((row) => {
+      const encounter = encounterRecordSchema.parse({
+        id: row.id,
+        appointmentId: row.appointment_id,
+        patientId: row.patient_id,
+        providerId: row.provider_id,
+        status: row.status,
+        startedAt: row.started_at,
+        patientJoinedAt: row.patient_joined_at,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      });
+      return [encounter.appointmentId, encounter] as const;
+    }),
+  );
 
   return (
     <Card>
@@ -58,6 +82,22 @@ export default async function ProviderDashboardPage() {
           <ul className="space-y-2">
             {appointments.map((appointment) => (
               <li key={appointment.id} className="rounded-md border p-3">
+                {(() => {
+                  const encounter = encountersByAppointmentId.get(appointment.id);
+                  if (!encounter) {
+                    return (
+                      <p className="text-xs uppercase tracking-wide text-amber-600">
+                        Encounter: not started
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <p className="text-xs uppercase tracking-wide text-emerald-700">
+                      Encounter: {encounter.status}
+                    </p>
+                  );
+                })()}
                 <p className="font-medium text-foreground">
                   Patient: {appointment.patientId}
                 </p>
@@ -71,6 +111,32 @@ export default async function ProviderDashboardPage() {
                     ? "Confirmed"
                     : "Cancelled"}
                 </p>
+                {(() => {
+                  const encounter = encountersByAppointmentId.get(appointment.id);
+                  if (!encounter) {
+                    return null;
+                  }
+
+                  return (
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {(encounter.status === "active" ||
+                        encounter.status === "connected") && (
+                        <Link
+                          className="inline-block text-xs text-primary underline underline-offset-4"
+                          href={`/encounters/${encounter.id}/video`}
+                        >
+                          Open session link
+                        </Link>
+                      )}
+                      <Link
+                        className="inline-block text-xs text-primary underline underline-offset-4"
+                        href={`/provider/notes/${encounter.id}`}
+                      >
+                        Open clinical note
+                      </Link>
+                    </div>
+                  );
+                })()}
               </li>
             ))}
           </ul>

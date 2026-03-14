@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/response";
 import { getRequestId } from "@/lib/api/request-id";
 import { getUserRole } from "@/lib/auth/roles";
+import { insertAuditEvent } from "@/lib/audit/log";
 import { createClient } from "@/lib/supabase/server";
 import {
   appointmentMutationSchema,
@@ -33,6 +34,16 @@ type SlotRecord = {
 
 type AppointmentsRepository = {
   getAuthUser: () => Promise<AuthUser | null>;
+  logAuditEvent: (event: {
+    eventType: string;
+    action: string;
+    resourceType: string;
+    resourceId?: string;
+    actorId?: string;
+    actorRole: string;
+    requestId: string;
+    metadata?: Record<string, unknown>;
+  }) => Promise<void>;
   getPatientIdByUserId: (userId: string) => Promise<string | null>;
   getSlotById: (slotId: string) => Promise<SlotRecord | null>;
   setSlotAvailability: (slotId: string, isAvailable: boolean) => Promise<void>;
@@ -183,11 +194,17 @@ export async function handleAppointmentsMutation(
 
   switch (parsedPayload.data.action) {
     case "book":
-      return handleBook(repo, requestId, patientId, parsedPayload.data);
+      return handleBook(repo, requestId, patientId, user.id, parsedPayload.data);
     case "reschedule":
-      return handleReschedule(repo, requestId, patientId, parsedPayload.data);
+      return handleReschedule(
+        repo,
+        requestId,
+        patientId,
+        user.id,
+        parsedPayload.data,
+      );
     case "cancel":
-      return handleCancel(repo, requestId, patientId, parsedPayload.data);
+      return handleCancel(repo, requestId, patientId, user.id, parsedPayload.data);
   }
 }
 
@@ -195,6 +212,7 @@ async function handleBook(
   repo: AppointmentsRepository,
   requestId: string,
   patientId: string,
+  actorUserId: string,
   payload: Extract<AppointmentMutationInput, { action: "book" }>,
 ) {
   const slot = await repo.getSlotById(payload.slotId);
@@ -218,6 +236,16 @@ async function handleBook(
     endsAt: slot.endsAt,
   });
   await repo.setSlotAvailability(slot.id, false);
+  await repo.logAuditEvent({
+    eventType: "appointments.booked",
+    action: "book",
+    resourceType: "appointment",
+    resourceId: appointment.id,
+    actorId: actorUserId,
+    actorRole: "patient",
+    requestId,
+    metadata: { slotId: slot.id, providerId: slot.providerId },
+  });
 
   return createMutationResponse(appointment, requestId, "Appointment booked.");
 }
@@ -226,6 +254,7 @@ async function handleReschedule(
   repo: AppointmentsRepository,
   requestId: string,
   patientId: string,
+  actorUserId: string,
   payload: Extract<AppointmentMutationInput, { action: "reschedule" }>,
 ) {
   const appointment = await repo.getAppointmentById(payload.appointmentId);
@@ -264,6 +293,20 @@ async function handleReschedule(
     endsAt: newSlot.endsAt,
     status: "confirmed",
   });
+  await repo.logAuditEvent({
+    eventType: "appointments.rescheduled",
+    action: "reschedule",
+    resourceType: "appointment",
+    resourceId: updated.id,
+    actorId: actorUserId,
+    actorRole: "patient",
+    requestId,
+    metadata: {
+      oldSlotId: appointment.slotId,
+      newSlotId: newSlot.id,
+      providerId: updated.providerId,
+    },
+  });
 
   return createMutationResponse(updated, requestId, "Appointment rescheduled.");
 }
@@ -272,6 +315,7 @@ async function handleCancel(
   repo: AppointmentsRepository,
   requestId: string,
   patientId: string,
+  actorUserId: string,
   payload: Extract<AppointmentMutationInput, { action: "cancel" }>,
 ) {
   const appointment = await repo.getAppointmentById(payload.appointmentId);
@@ -290,6 +334,16 @@ async function handleCancel(
   await repo.setSlotAvailability(appointment.slotId, true);
   const updated = await repo.updateAppointment(appointment.id, {
     status: "cancelled",
+  });
+  await repo.logAuditEvent({
+    eventType: "appointments.cancelled",
+    action: "cancel",
+    resourceType: "appointment",
+    resourceId: updated.id,
+    actorId: actorUserId,
+    actorRole: "patient",
+    requestId,
+    metadata: { slotId: updated.slotId },
   });
 
   return createMutationResponse(updated, requestId, "Appointment cancelled.");
@@ -325,6 +379,9 @@ function createSupabaseAppointmentsRepository(
       const { data, error } = await supabase.auth.getUser();
       if (error) return null;
       return data.user;
+    },
+    async logAuditEvent(event) {
+      await insertAuditEvent(supabase, event);
     },
     async getPatientIdByUserId(userId: string) {
       const { data, error } = await supabase
