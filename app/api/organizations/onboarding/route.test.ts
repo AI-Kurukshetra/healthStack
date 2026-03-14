@@ -2,31 +2,37 @@ import { describe, expect, it } from "vitest";
 import { handleOrganizationOnboardingPost } from "@/app/api/organizations/onboarding/handlers";
 
 type RouteClient = Parameters<typeof handleOrganizationOnboardingPost>[0];
+type AdminClient = NonNullable<
+  Parameters<typeof handleOrganizationOnboardingPost>[3]
+>["adminClient"];
 
 function createClient(options?: {
   userId?: string | null;
-  hasMembership?: boolean;
-  hasSlug?: boolean;
-}) {
+}): RouteClient {
   const userId =
     options?.userId === undefined
       ? "f7300c7a-dad9-4bdb-a05e-57a9f5e4e209"
       : options.userId;
 
-  const client: RouteClient = {
+  return {
     auth: {
       getUser: async () => ({
         data: { user: userId ? { id: userId } : null },
         error: null,
       }),
     },
+  };
+}
+
+function createAdminClient(options?: { hasSlug?: boolean }): AdminClient {
+  return {
     from: (table) => {
       if (table === "organization_memberships") {
         return {
           select: () => ({
             eq: () => ({
               limit: async () => ({
-                data: options?.hasMembership ? [{ id: "membership-1" }] : [],
+                data: [],
                 error: null,
               }),
             }),
@@ -66,8 +72,6 @@ function createClient(options?: {
       };
     },
   };
-
-  return client;
 }
 
 describe("organization onboarding route", () => {
@@ -76,6 +80,7 @@ describe("organization onboarding route", () => {
       createClient({ userId: null }),
       "req-auth",
       { name: "Acme Clinic", slug: "acme-clinic" },
+      { adminClient: createAdminClient() },
     );
     const body = await response.json();
 
@@ -88,6 +93,7 @@ describe("organization onboarding route", () => {
       createClient(),
       "req-create",
       { name: "Acme Clinic", slug: "acme-clinic" },
+      { adminClient: createAdminClient() },
     );
     const body = await response.json();
 
@@ -98,9 +104,10 @@ describe("organization onboarding route", () => {
 
   it("rejects slug conflict", async () => {
     const response = await handleOrganizationOnboardingPost(
-      createClient({ hasSlug: true }),
+      createClient(),
       "req-slug",
       { name: "Acme Clinic", slug: "acme-clinic" },
+      { adminClient: createAdminClient({ hasSlug: true }) },
     );
     const body = await response.json();
 

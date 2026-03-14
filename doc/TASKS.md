@@ -49,3 +49,14 @@ Legend: `[ ]` todo, `[x]` done, `[~]` in-progress, `[!]` blocked
 - [x] [2026-03-14 14:41] Create/update super admin user (`rutvik.patel@bacancy.com`) and implement role-based dashboard visibility: admin all organizations, owner/admin org-scoped patient data, patient self-only appointments/history
 - [x] [2026-03-14 14:52] Update auth UX copy/alignment: replace "Back to landing page" with "Back", verify login links target `/login`, and center-align auth status page content
 - [x] [2026-03-14 14:53] Fix Supabase signup reliability and diagnostics: configurable auth email redirect base URL + explicit signup error mapping for redirect/signups-disabled/database failures
+- [x] [2026-03-14 15:00] Fix onboarding organization creation failure by using admin client for slug uniqueness and org/membership writes under RLS
+- [x] [2026-03-14 15:04] Refactor dashboard shell to sidebar layout and add admin all-patients workspace so platform admin can view patients across all organizations
+- [x] [2026-03-14 15:05] Add organization directory search + pagination and patient click-through to dedicated patient history page in provider dashboard
+- [x] [2026-03-14 15:10] Move dashboard sidebar logout action to footer bottom and remove public landing link above logout
+- [x] [2026-03-14 15:09] Add patient directory search and pagination for admin patient listing (`/admin/patients`)
+- [x] [2026-03-14 15:13] Improve dashboard sidebar card styling to align with main card visual language and strengthen footer logout action presentation
+- [x] [2026-03-14 15:10] Clear Supabase data and reseed with realistic demo records plus fixed Platform Admin account (`rutvik.patel@bacancy.com`)
+- [x] [2026-03-14 15:11] Make admin patient directory cards clickable to open patient details with history (`/admin/patients/[patientId]`)
+- [x] [2026-03-14 15:17] Improve admin patient directory to table-style detail view and make desktop dashboard sidebar fixed/non-scrollable
+- [x] [2026-03-14 15:17] Fix admin patients search behavior for multi-word terms and organization-name matching
+- [x] [2026-03-14 15:14] Remove Patient ID and User ID display from admin patient details card

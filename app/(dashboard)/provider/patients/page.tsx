@@ -211,15 +211,23 @@ export default async function ProviderPatientsDashboardPage() {
                     key={patient.id}
                     className="rounded-xl border border-slate-900/10 bg-white p-3"
                   >
-                    <p className="font-medium text-slate-950">
-                      {patient.firstName} {patient.lastName}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      DOB: {new Date(patient.dateOfBirth).toLocaleDateString()}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      Visits: {appointmentCountByPatientId.get(patient.id) ?? 0}
-                    </p>
+                    <Link
+                      href={`/provider/patients/${patient.id}`}
+                      className="block rounded-md outline-none ring-cyan-500 transition hover:bg-slate-50 focus:ring-2"
+                    >
+                      <p className="font-medium text-slate-950">
+                        {patient.firstName} {patient.lastName}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        DOB: {new Date(patient.dateOfBirth).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        Visits: {appointmentCountByPatientId.get(patient.id) ?? 0}
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-cyan-900">
+                        Open patient history
+                      </p>
+                    </Link>
                   </li>
                 ))}
               </ul>

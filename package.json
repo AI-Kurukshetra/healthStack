@@ -5,6 +5,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "node --env-file=.env.local supabase/seed.mjs",
+    "seed:reset": "SEED_CLEAR_DATABASE=true node --env-file=.env.local supabase/seed.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

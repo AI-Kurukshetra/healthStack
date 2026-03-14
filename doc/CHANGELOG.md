@@ -142,3 +142,29 @@
 - Added regression tests in `lib/api/errors.test.ts` for the new signup error mappings.
 - Updated `.env.example` and `README.md` to document `NEXT_PUBLIC_SITE_URL` for auth email redirect reliability.
 - Updated auth route copy/alignment: changed "Back to landing page" CTA text to "Back" across auth split pages (`/login`, `/register`, `/forgot-password`, `/sign-up-success`, `/update-password`, `/auth/error`), center-aligned right-panel status content on `/sign-up-success` and `/auth/error`, and verified auth login links resolve to `/login`.
+- Fixed onboarding organization creation reliability in `app/api/organizations/onboarding/handlers.ts` by using `createAdminClient()` for organization slug lookup and organization/membership inserts after auth validation.
+- Added explicit duplicate-slug detection on insert fallback (`ORG_SLUG_TAKEN`) and included provider error message details for `ORG_CREATE_FAILED`/`ORG_MEMBERSHIP_CREATE_FAILED` diagnostics.
+- Updated onboarding unit tests in `app/api/organizations/onboarding/route.test.ts` to inject admin-client mocks and validate create + slug-conflict paths.
+- Added sidebar navigation component `components/dashboard/sidebar-nav.tsx` with role-aware links and active-route styling.
+- Refactored dashboard shell in `app/(dashboard)/layout.tsx` from header-nav to a persistent sidebar layout (desktop) plus mobile menu panel.
+- Added platform-admin route `app/(dashboard)/admin/patients/page.tsx` to list all patients across organizations with appointment counts.
+- Updated `app/(dashboard)/dashboard/page.tsx` admin quick links to include `All Patients` (`/admin/patients`) and retain `Organizations`.
+- Enhanced admin organizations directory (`app/(dashboard)/organizations/page.tsx`) with URL-driven search (`q`) and pagination (`page`, 10/page), including filtered result counts and previous/next navigation.
+- Updated provider patients dashboard (`app/(dashboard)/provider/patients/page.tsx`) so each patient card is clickable and routes to a dedicated patient-history page.
+- Added `app/(dashboard)/provider/patients/[patientId]/page.tsx` for role-aware patient history drill-down (patient profile, appointments, clinical notes) with organization-scoped access checks.
+- Updated `app/(dashboard)/layout.tsx` to anchor sidebar logout action at the bottom of the sidebar and removed the `Public landing` link from the sidebar footer.
+- Enhanced `app/(dashboard)/admin/patients/page.tsx` patient directory with server-side search + pagination (`q`/`page`), paged result stats, and preserved-filter navigation controls.
+- Enhanced sidebar visual design in `app/(dashboard)/layout.tsx` by wrapping profile header in a card section and styling logout as a full-width branded footer action.
+- Updated `components/dashboard/sidebar-nav.tsx` to a card-based nav container with bordered nav items and stronger active state treatment.
+- Extended `components/logout-button.tsx` to accept optional `className` for context-specific layout/styling.
+- Updated `supabase/seed.mjs` with explicit reset mode (`SEED_CLEAR_DATABASE=true`) that clears domain tables, removes existing auth users, and reseeds cleanly.
+- Added fixed Platform Admin seeding in `supabase/seed.mjs` using configurable env vars (`PLATFORM_ADMIN_*`) and realistic metadata (`first_name`, `last_name`, `full_name`, `role=admin`).
+- Updated seed organization defaults to realistic naming (`Bacancy Health Network`, `bacancy-health-network`) with env overrides.
+- Added `pnpm seed:reset` script in `package.json` for one-command clear + reseed execution.
+- Executed reset seed on remote Supabase using requested credentials; run summary: deleted `46` auth users, then seeded `4` providers, `18` patients, `48` slots, `24` appointments, `12` encounters, `9` notes, and `40` audit logs.
+- Updated `app/(dashboard)/admin/patients/page.tsx` to make each patient directory card navigate to a dedicated details page.
+- Added `app/(dashboard)/admin/patients/[patientId]/page.tsx` for platform-admin patient details with appointment timeline and clinical-note history.
+- Updated `app/(dashboard)/admin/patients/page.tsx` patient directory presentation from card list to a table-style grid with columns for patient identity, DOB, organization, appointment count, created date, and details action.
+- Updated `app/(dashboard)/layout.tsx` desktop shell to a fixed sidebar (`lg:fixed`, `lg:w-[260px]`) with content offset, keeping sidebar static/non-scrollable while page content scrolls.
+- Improved admin patients search in `app/(dashboard)/admin/patients/page.tsx`: multi-word tokenized query matching, safer token sanitization, and organization-name/slug based search support via organization ID expansion.
+- Removed raw identifier display from admin patient details card in `app/(dashboard)/admin/patients/[patientId]/page.tsx` by deleting `Patient ID` and `User ID` rows from the card content.

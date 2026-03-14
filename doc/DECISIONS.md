@@ -183,3 +183,47 @@
 ## 2026-03-14 - Auth Navigation Copy and Status Alignment
 - Decision: Standardize split-auth secondary navigation copy to a concise `Back` CTA and center-align status-state right-panel content on `/sign-up-success` and `/auth/error`, while keeping canonical login links on `/login`.
 - Rationale: The shorter CTA and centered status messaging improve scanability/consistency across auth routes without changing route behavior.
+
+## 2026-03-14 - Onboarding Writes via Admin Client
+- Decision: Execute organization slug uniqueness checks and organization/membership creation in onboarding via server-side admin Supabase client after verifying authenticated user identity.
+- Rationale: RLS prevents unaffiliated users from reliably querying organizations, which can mask slug collisions and cause generic create failures; admin-path writes keep onboarding deterministic while preserving auth gating.
+
+## 2026-03-14 - Sidebar-First Dashboard Shell
+- Decision: Move authenticated dashboard navigation to a sidebar-first shell with role-aware items and active-route highlighting.
+- Rationale: As role surfaces grew (patient/provider/admin), top-nav became crowded; sidebar navigation improves clarity and scale.
+
+## 2026-03-14 - Platform Admin All-Patients Workspace
+- Decision: Add `/admin/patients` for platform admins, backed by service-role reads, to provide cross-organization patient visibility in one place.
+- Rationale: Platform admin responsibilities require a global patient directory that tenant-scoped provider views cannot provide.
+
+## 2026-03-14 - Organization Directory Search/Pagination + Patient History Drill-Down
+- Decision: Implement server-side URL-parameter-driven organization browsing (`q`, `page`) and add patient drill-down routing from provider patient list to `/provider/patients/[patientId]` for focused history review.
+- Rationale: Organization lists will grow and need discoverability controls, and patient-level history access reduces scanning friction versus reading mixed lists on a single dashboard page.
+
+## 2026-03-14 - Admin Patient Directory Search/Pagination
+- Decision: Add URL-parameter-driven server-side filtering and pagination to `/admin/patients` using `q` and `page`, with 10-row pages.
+- Rationale: The patient directory will continue to grow; searchable and paged listing keeps it performant and easier to operate for platform admins.
+
+## 2026-03-14 - Destructive Seed Runs Must Be Explicit
+- Decision: Keep normal seeding non-destructive, and require `SEED_CLEAR_DATABASE=true` for destructive clear-and-reseed behavior.
+- Rationale: This prevents accidental production data wipes while still enabling one-command environment resets when explicitly requested.
+
+## 2026-03-14 - Platform Admin Seed Is Deterministic
+- Decision: Always ensure a deterministic platform admin account during seeding, with identity fields sourced from env (`PLATFORM_ADMIN_*`) and `role=admin`.
+- Rationale: Admin access validation and demos require a stable operator account; env-driven identity avoids hardcoding sensitive credentials in source.
+
+## 2026-03-14 - Admin Patient Card Drill-Down Behavior
+- Decision: Make `/admin/patients` cards navigable to `/admin/patients/[patientId]` and render full patient details with appointment and clinical-history context.
+- Rationale: Card click-through removes friction and aligns the admin directory with the expected detail-first workflow for reviewing patient history.
+
+## 2026-03-14 - Admin Patient Directory Uses Table Layout
+- Decision: Replace card-stacked patient directory rows in `/admin/patients` with a table-style layout for denser, scan-friendly operational details.
+- Rationale: Platform admins need quick cross-row comparison (DOB, org, counts, created date), which is more efficient in tabular structure than cards.
+
+## 2026-03-14 - Desktop Sidebar Must Stay Fixed
+- Decision: Use a fixed-position sidebar on desktop (`lg:fixed`) and shift main content with left padding to avoid sidebar movement during page scroll.
+- Rationale: Keeping navigation static improves orientation and meets explicit UX requirement for a non-scrollable, always-available sidebar.
+
+## 2026-03-14 - Tokenized Admin Patient Search
+- Decision: Use tokenized search terms (up to 3 tokens) for admin patient directory filters and include organization name/slug matching by resolving candidate organization IDs first.
+- Rationale: Single-string search made full-name queries appear broken; tokenized matching improves discoverability while keeping query complexity bounded.

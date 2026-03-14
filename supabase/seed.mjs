@@ -18,8 +18,22 @@ const DEFAULT_ENCOUNTER_COUNT = 16;
 const DEFAULT_NOTE_COUNT = 10;
 const DEFAULT_AUDIT_LOG_COUNT = 40;
 
-const SEED_ORG_SLUG = "seed-org";
-const SEED_ORG_NAME = "Seed Organization";
+const SEED_ORG_SLUG = process.env.SEED_ORG_SLUG ?? "bacancy-health-network";
+const SEED_ORG_NAME = process.env.SEED_ORG_NAME ?? "Bacancy Health Network";
+const PLATFORM_ADMIN_EMAIL =
+  process.env.PLATFORM_ADMIN_EMAIL ?? "rutvik.patel@bacancy.com";
+const PLATFORM_ADMIN_PASSWORD = process.env.PLATFORM_ADMIN_PASSWORD;
+const PLATFORM_ADMIN_FIRST_NAME = process.env.PLATFORM_ADMIN_FIRST_NAME ?? "Rutvik";
+const PLATFORM_ADMIN_LAST_NAME = process.env.PLATFORM_ADMIN_LAST_NAME ?? "Patel";
+const shouldClearDatabase = ["1", "true", "yes"].includes(
+  String(process.env.SEED_CLEAR_DATABASE ?? "").toLowerCase(),
+);
+
+if (!PLATFORM_ADMIN_PASSWORD) {
+  throw new Error(
+    "Missing env var: PLATFORM_ADMIN_PASSWORD is required to seed platform admin user.",
+  );
+}
 
 const readIntEnv = (name, fallback) => {
   const raw = process.env[name];
@@ -45,6 +59,11 @@ const auditLogCount = readIntEnv("SEED_AUDIT_LOG_COUNT", DEFAULT_AUDIT_LOG_COUNT
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+
+const isMissingTableError = (error) => {
+  const message = String(error?.message ?? "").toLowerCase();
+  return message.includes("could not find the table") || message.includes("does not exist");
+};
 
 const createUser = async (role) => {
   const firstName = faker.person.firstName();
@@ -158,8 +177,123 @@ const ensureSeedOrganization = async () => {
   return { orgId: data.id, hasOrganizations: true, hasMemberships };
 };
 
+const deleteAllRows = async (table, primaryColumn = "id") => {
+  const { error } = await supabase.from(table).delete().not(primaryColumn, "is", null);
+  if (error && !isMissingTableError(error)) {
+    throw new Error(`Failed to clear ${table}: ${error.message}`);
+  }
+};
+
+const clearDomainData = async () => {
+  const deletePlan = [
+    { table: "clinical_notes" },
+    { table: "encounters" },
+    { table: "appointments" },
+    { table: "audit_logs" },
+    { table: "provider_availability_slots" },
+    { table: "patients" },
+    { table: "organization_memberships" },
+  ];
+
+  for (const step of deletePlan) {
+    await deleteAllRows(step.table);
+  }
+
+  const { error: orgDeleteError } = await supabase
+    .from("organizations")
+    .delete()
+    .neq("slug", "default-org");
+  if (orgDeleteError && !isMissingTableError(orgDeleteError)) {
+    throw new Error(`Failed to clear organizations: ${orgDeleteError.message}`);
+  }
+};
+
+const listAllUsers = async () => {
+  const users = [];
+  const perPage = 200;
+  let page = 1;
+
+  while (true) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw new Error(`Failed to list auth users: ${error.message}`);
+    }
+    const pageUsers = data?.users ?? [];
+    if (pageUsers.length === 0) break;
+    users.push(...pageUsers);
+    if (pageUsers.length < perPage) break;
+    page += 1;
+  }
+
+  return users;
+};
+
+const clearAuthUsers = async () => {
+  const users = await listAllUsers();
+  for (const user of users) {
+    const { error } = await supabase.auth.admin.deleteUser(user.id);
+    if (error) {
+      throw new Error(`Failed to delete auth user ${user.email ?? user.id}: ${error.message}`);
+    }
+  }
+  return users.length;
+};
+
+const findUserByEmail = async (email) => {
+  const users = await listAllUsers();
+  return users.find((user) => user.email?.toLowerCase() === email.toLowerCase()) ?? null;
+};
+
+const ensurePlatformAdmin = async () => {
+  const userMetadata = {
+    role: "admin",
+    first_name: PLATFORM_ADMIN_FIRST_NAME,
+    last_name: PLATFORM_ADMIN_LAST_NAME,
+    full_name: `${PLATFORM_ADMIN_FIRST_NAME} ${PLATFORM_ADMIN_LAST_NAME}`,
+  };
+
+  const existingUser = await findUserByEmail(PLATFORM_ADMIN_EMAIL);
+
+  if (existingUser) {
+    const { data, error } = await supabase.auth.admin.updateUserById(existingUser.id, {
+      email: PLATFORM_ADMIN_EMAIL,
+      password: PLATFORM_ADMIN_PASSWORD,
+      email_confirm: true,
+      user_metadata: userMetadata,
+    });
+
+    if (error || !data.user) {
+      throw new Error(`Failed to update platform admin user: ${error?.message ?? "Unknown error"}`);
+    }
+
+    return data.user;
+  }
+
+  const { data, error } = await supabase.auth.admin.createUser({
+    email: PLATFORM_ADMIN_EMAIL,
+    password: PLATFORM_ADMIN_PASSWORD,
+    email_confirm: true,
+    user_metadata: userMetadata,
+  });
+
+  if (error || !data.user) {
+    throw new Error(`Failed to create platform admin user: ${error?.message ?? "Unknown error"}`);
+  }
+
+  return data.user;
+};
+
 const main = async () => {
   console.log("Starting seed...");
+
+  if (shouldClearDatabase) {
+    console.log("Clearing existing data...");
+    await clearDomainData();
+    const deletedUsers = await clearAuthUsers();
+    console.log(`Deleted ${deletedUsers} existing auth users.`);
+  }
+
+  const platformAdmin = await ensurePlatformAdmin();
 
   const patientsHasOrgId = await columnExists("patients", "organization_id");
   const slotsHasOrgId = await columnExists("provider_availability_slots", "organization_id");
@@ -181,7 +315,11 @@ const main = async () => {
   }
 
   if (orgId && hasMemberships) {
-    const membershipRows = [...providers, ...patientUsers].map((user) => ({
+    const membershipRows = [
+      { id: platformAdmin.id, role: "admin" },
+      ...providers.map((user) => ({ id: user.id, role: user.role })),
+      ...patientUsers.map((user) => ({ id: user.id, role: user.role })),
+    ].map((user) => ({
       organization_id: orgId,
       user_id: user.id,
       role: user.role,
@@ -422,6 +560,8 @@ const main = async () => {
   console.log(
     JSON.stringify(
       {
+        clearDatabase: shouldClearDatabase,
+        platformAdmin: PLATFORM_ADMIN_EMAIL,
         organization: hasOrganizations ? (orgId ?? "unknown") : "not_available",
         providers: providers.length,
         patients: patients.length,

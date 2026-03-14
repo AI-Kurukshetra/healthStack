@@ -67,7 +67,7 @@ export default async function DashboardPage() {
               </Link>
             </div>
           ) : null}
-          {role === "provider" || isAdmin ? (
+          {role === "provider" ? (
             <div className="grid gap-2">
               <Link
                 className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
@@ -90,15 +90,26 @@ export default async function DashboardPage() {
             </div>
           ) : null}
           {isAdmin ? (
-            <Link
-              className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
-              href="/organizations"
-            >
-              <p className="font-medium text-slate-950">Organizations</p>
-              <p className="text-slate-600">
-                Review all organizations and top-level operational counts.
-              </p>
-            </Link>
+            <div className="grid gap-2">
+              <Link
+                className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
+                href="/admin/patients"
+              >
+                <p className="font-medium text-slate-950">All Patients</p>
+                <p className="text-slate-600">
+                  Review every patient across all organizations.
+                </p>
+              </Link>
+              <Link
+                className="rounded-xl border border-slate-900/10 bg-white p-3 transition hover:-translate-y-0.5 hover:border-cyan-900/35"
+                href="/organizations"
+              >
+                <p className="font-medium text-slate-950">Organizations</p>
+                <p className="text-slate-600">
+                  Review all organizations and top-level operational counts.
+                </p>
+              </Link>
+            </div>
           ) : (
             <div className="rounded-xl border border-dashed border-slate-900/25 bg-white p-3">
               <p className="font-medium text-slate-950">Organization Access</p>

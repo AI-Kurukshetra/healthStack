@@ -3,6 +3,7 @@ import { isPlatformAdmin } from "@/lib/auth/roles";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Organizations | Health Stack",
@@ -25,7 +26,23 @@ type OrganizationSummary = {
   appointmentCount: number;
 };
 
-export default async function OrganizationsPage() {
+const PAGE_SIZE = 10;
+
+type OrganizationsSearchParams = {
+  q?: string;
+  page?: string;
+};
+
+export default async function OrganizationsPage({
+  searchParams,
+}: {
+  searchParams?: Promise<OrganizationsSearchParams>;
+}) {
+  const resolvedSearchParams = await searchParams;
+  const searchTerm = (resolvedSearchParams?.q ?? "").trim();
+  const requestedPage = Number.parseInt(resolvedSearchParams?.page ?? "1", 10);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+
   const supabase = await createClient();
   const { data: authData } = await supabase.auth.getUser();
 
@@ -43,10 +60,23 @@ export default async function OrganizationsPage() {
   }
 
   const adminClient = createAdminClient();
-  const { data: organizations, error } = await adminClient
+  let organizationsQuery = adminClient
     .from("organizations")
-    .select("id,name,slug,created_at")
+    .select("id,name,slug,created_at", { count: "exact" })
     .order("created_at", { ascending: true });
+
+  if (searchTerm.length > 0) {
+    organizationsQuery = organizationsQuery.or(
+      `name.ilike.%${searchTerm}%,slug.ilike.%${searchTerm}%`,
+    );
+  }
+
+  const startIndex = (page - 1) * PAGE_SIZE;
+  const endIndex = startIndex + PAGE_SIZE - 1;
+  const { data: organizations, error, count } = await organizationsQuery.range(
+    startIndex,
+    endIndex,
+  );
 
   if (error) {
     return (
@@ -66,6 +96,15 @@ export default async function OrganizationsPage() {
       buildOrganizationSummary(adminClient, organization),
     ),
   );
+  const totalOrganizations = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalOrganizations / PAGE_SIZE));
+  const hasPreviousPage = page > 1;
+  const hasNextPage = page < totalPages;
+  const rangeStart = totalOrganizations === 0 ? 0 : startIndex + 1;
+  const rangeEnd = totalOrganizations === 0 ? 0 : startIndex + summaries.length;
+
+  const buildPageHref = (nextPage: number) =>
+    `/organizations?page=${nextPage}${searchTerm ? `&q=${encodeURIComponent(searchTerm)}` : ""}`;
 
   return (
     <div className="grid gap-4">
@@ -82,7 +121,7 @@ export default async function OrganizationsPage() {
               Organizations
             </p>
             <p className="mt-1 text-2xl font-semibold text-cyan-950">
-              {summaries.length}
+              {totalOrganizations}
             </p>
           </div>
           <div className="rounded-xl border border-slate-900/10 bg-white p-3">
@@ -112,6 +151,25 @@ export default async function OrganizationsPage() {
           <CardTitle className="text-cyan-950">Organization Directory</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-slate-700">
+          <form action="/organizations" method="get" className="flex gap-2">
+            <input
+              name="q"
+              defaultValue={searchTerm}
+              placeholder="Search by organization name or slug"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none ring-cyan-500 transition placeholder:text-slate-400 focus:border-cyan-500 focus:ring-2"
+            />
+            <button
+              type="submit"
+              className="rounded-lg bg-cyan-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-cyan-800"
+            >
+              Search
+            </button>
+          </form>
+          <p className="text-xs text-slate-500">
+            Showing {rangeStart}-{rangeEnd} of {totalOrganizations}
+            {searchTerm ? ` for "${searchTerm}"` : ""}.
+          </p>
+
           {summaries.length === 0 ? (
             <p>No organizations found.</p>
           ) : (
@@ -135,6 +193,36 @@ export default async function OrganizationsPage() {
               ))}
             </ul>
           )}
+
+          <div className="flex items-center justify-between border-t border-slate-200 pt-3">
+            {hasPreviousPage ? (
+              <Link
+                href={buildPageHref(page - 1)}
+                className="rounded-md px-3 py-1 text-sm text-cyan-900 underline underline-offset-4"
+              >
+                Previous
+              </Link>
+            ) : (
+              <span className="cursor-not-allowed rounded-md px-3 py-1 text-sm text-slate-400">
+                Previous
+              </span>
+            )}
+            <p className="text-xs text-slate-500">
+              Page {Math.min(page, totalPages)} of {totalPages}
+            </p>
+            {hasNextPage ? (
+              <Link
+                href={buildPageHref(page + 1)}
+                className="rounded-md px-3 py-1 text-sm text-cyan-900 underline underline-offset-4"
+              >
+                Next
+              </Link>
+            ) : (
+              <span className="cursor-not-allowed rounded-md px-3 py-1 text-sm text-slate-400">
+                Next
+              </span>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

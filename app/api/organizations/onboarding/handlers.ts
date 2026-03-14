@@ -1,5 +1,6 @@
 import { ApiError, createJsonBodyError, createValidationError } from "@/lib/api/errors";
 import { createErrorResponse, createMutationResponse } from "@/lib/api/response";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   organizationOnboardingSchema,
   type OrganizationOnboardingInput,
@@ -12,6 +13,9 @@ export type OnboardingRouteClient = {
       error: { message?: string } | null;
     }>;
   };
+};
+
+type OnboardingAdminClient = {
   from: (table: "organization_memberships" | "organizations") => {
     select: (query: string) => {
       eq: (column: "user_id" | "slug", value: string) => {
@@ -40,6 +44,9 @@ export async function handleOrganizationOnboardingPost(
   client: OnboardingRouteClient,
   requestId: string,
   payload: unknown,
+  options?: {
+    adminClient?: OnboardingAdminClient;
+  },
 ) {
   const { data: authData, error: authError } = await client.auth.getUser();
 
@@ -60,9 +67,10 @@ export async function handleOrganizationOnboardingPost(
   }
 
   const userId = authData.user.id;
+  const adminClient = options?.adminClient ?? createAdminClient();
 
   const slug = parsed.data.slug.toLowerCase();
-  const { data: existingSlugRows, error: slugLookupError } = await client
+  const { data: existingSlugRows, error: slugLookupError } = await adminClient
     .from("organizations")
     .select("id")
     .eq("slug", slug)
@@ -90,11 +98,22 @@ export async function handleOrganizationOnboardingPost(
     );
   }
 
-  const { data: orgRow, error: orgInsertError } = await client
+  const { data: orgRow, error: orgInsertError } = await adminClient
     .from("organizations")
     .insert({ name: parsed.data.name, slug })
     .select("id,name,slug")
     .single();
+
+  if (isUniqueSlugViolation(orgInsertError)) {
+    return createErrorResponse(
+      new ApiError({
+        code: "ORG_SLUG_TAKEN",
+        message: "Organization slug is already in use.",
+        status: 409,
+      }),
+      requestId,
+    );
+  }
 
   if (orgInsertError || !orgRow) {
     return createErrorResponse(
@@ -102,12 +121,13 @@ export async function handleOrganizationOnboardingPost(
         code: "ORG_CREATE_FAILED",
         message: "Unable to create organization.",
         status: 500,
+        details: orgInsertError?.message,
       }),
       requestId,
     );
   }
 
-  const { error: membershipInsertError } = await client
+  const { error: membershipInsertError } = await adminClient
     .from("organization_memberships")
     .insert({
       organization_id: orgRow.id,
@@ -123,6 +143,7 @@ export async function handleOrganizationOnboardingPost(
         code: "ORG_MEMBERSHIP_CREATE_FAILED",
         message: "Unable to create organization membership.",
         status: 500,
+        details: membershipInsertError?.message,
       }),
       requestId,
     );
@@ -147,4 +168,13 @@ export async function parseOrganizationOnboardingJsonBody(
   } catch {
     throw createJsonBodyError();
   }
+}
+
+function isUniqueSlugViolation(error: { message?: string } | null): boolean {
+  const message = error?.message?.toLowerCase() ?? "";
+
+  return (
+    message.includes("duplicate key value") &&
+    (message.includes("organizations_slug_key") || message.includes("slug"))
+  );
 }
